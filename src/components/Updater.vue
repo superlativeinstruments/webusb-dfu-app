@@ -183,6 +183,11 @@ async function upgrade() {
 	}
 }
 
+async function findLatestFirmware() {
+	const response = await fetch(`${deviceName.value.toLowerCase()}/latest.bin`);
+	return await response.arrayBuffer();
+}
+
 async function download() {
 	try {
 		let status = await device.getStatus();
@@ -194,8 +199,7 @@ async function download() {
 		setError('Failed to clear status');
 	}
 
-	const response = await fetch('example.bin');
-	const file = await response.arrayBuffer();
+	const file = await findLatestFirmware();
 
 	await device.do_download(transferSize, file, manifestationTolerant);
 
@@ -304,7 +308,6 @@ button {
 	background-color: black;
 	color: white;
 	border: none;
-	/* padding: 10px 20px; */
 	width: 150px;
 	height: 150px;
 	border-radius: 75px;
