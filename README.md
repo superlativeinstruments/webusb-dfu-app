@@ -14,3 +14,7 @@ Web application for updating firmware through DFU.
 - Find the device directory in `/public`.
 - Backup the current `latest.bin`.
 - Replace `latest.bin` with the new firmware. The file name must stay the same.
+
+## Troubleshooting / Known issues
+
+- The update process does not work if there is an active STLink connection to the device. Disconnect all active connections and try again if you are experience problems.
