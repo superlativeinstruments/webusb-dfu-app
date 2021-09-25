@@ -2,19 +2,11 @@
 import {DFU, DFUse} from 'webdfu';
 import {ref, reactive, computed} from 'vue';
 
-const isLocalhost = Boolean(
-    window.location.hostname === 'localhost' ||
-    // [::1] is the IPv6 localhost address.
-    window.location.hostname === '[::1]' ||
-    // 127.0.0.1/8 is considered localhost for IPv4.
-    window.location.hostname.match(
-        /^127(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}$/
-    )
-);
-
 const vendorId = 0x0483;
 const compatibleDevices = [
-	0xDF11
+	0xDF11,
+	0xDF12,
+	0xDF13
 ];
 
 let webusbSupported = true;
@@ -25,6 +17,7 @@ let manifestationTolerant = true;
 let transferSize = 1024;
 
 const states = reactive({
+	WAITING_FOR_REQUEST: 'waitingForRequest',
 	WAITING_FOR_DEVICE: 'waitingForDevice',
 	READY: 'ready',
 	ERASING: 'erasing',
@@ -247,33 +240,37 @@ if (typeof navigator.usb === 'undefined') {
 const strokeDasharray = `${200 * Math.PI} ${200 * Math.PI}`;
 const progressCircle = computed(() => (1 - progress.value) * (200 * Math.PI))
 
-if (isLocalhost) {
-	let devices = await searchForCompatibleDevices();
+let devices = await searchForCompatibleDevices();
 
-	if (devices.length > 0) {
-		device = devices[0];
-		deviceName.value = device.productName;
-		state.value = states.READY;
-	}
+if (devices.length > 0) {
+	device = devices[0];
+	deviceName.value = device.productName;
+	state.value = states.READY;
 } else {
-	state.value = states.WAITING_FOR_DEVICE;
+	state.value = states.WAITING_FOR_REQUEST;
 }
 
 async function requestDevice() {
 	try {
-		device = await navigator.usb.requestDevice({filters: [{vendorId: 0x0483, productId: 0xDF11}]});
+		device = await navigator.usb.requestDevice({
+			filters: compatibleDevices.map(element => {
+				return {vendorId,  productId: element};
+			})
+		});
+		
+		deviceName.value = device.productName;
+		state.value = states.READY;
 	} catch (error) {
 		console.error('No device selected');
-	}
 
-	deviceName.value = device.productName;
-	state.value = states.READY;
+		state.value = states.WAITING_FOR_REQUEST;
+	}
 }
 </script>
 
 <template>
 	<div v-if="webusbSupported">
-		<div v-if="!isLocalhost && state == states.WAITING_FOR_DEVICE">
+		<div v-if="state == states.WAITING_FOR_REQUEST">
 			<button @click="requestDevice">Connect</button>
 		</div>
 
@@ -281,7 +278,7 @@ async function requestDevice() {
 			<button type="button" @click="upgrade">Upgrade<br/>{{deviceName}}</button>
 		</div>
 
-		<div v-if="isLocalhost && state == states.WAITING_FOR_DEVICE">
+		<div v-if="state == states.WAITING_FOR_DEVICE">
 			<h1>Please connect a supported device</h1>
 		</div>
 
