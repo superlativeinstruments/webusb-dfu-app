@@ -12,5 +12,8 @@ export default defineConfig({
 	},
 	plugins: [
 		vue()
-	]
+	],
+	build: {
+		minify: false
+	}
 })

@@ -2,6 +2,16 @@
 import {DFU, DFUse} from 'webdfu';
 import {ref, reactive, computed} from 'vue';
 
+const isLocalhost = Boolean(
+    window.location.hostname === 'localhost' ||
+    // [::1] is the IPv6 localhost address.
+    window.location.hostname === '[::1]' ||
+    // 127.0.0.1/8 is considered localhost for IPv4.
+    window.location.hostname.match(
+        /^127(?:\.(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}$/
+    )
+);
+
 const vendorId = 0x0483;
 const compatibleDevices = [
 	0xDF11
@@ -234,25 +244,44 @@ if (typeof navigator.usb === 'undefined') {
 </script>
 
 <script setup>
-let devices = await searchForCompatibleDevices();
+const strokeDasharray = `${200 * Math.PI} ${200 * Math.PI}`;
+const progressCircle = computed(() => (1 - progress.value) * (200 * Math.PI))
 
-if (devices.length > 0) {
-	device = devices[0];
+if (isLocalhost) {
+	let devices = await searchForCompatibleDevices();
+
+	if (devices.length > 0) {
+		device = devices[0];
+		deviceName.value = device.productName;
+		state.value = states.READY;
+	}
+} else {
+	state.value = states.WAITING_FOR_DEVICE;
+}
+
+async function requestDevice() {
+	try {
+		device = await navigator.usb.requestDevice({filters: [{vendorId: 0x0483, productId: 0xDF11}]});
+	} catch (error) {
+		console.error('No device selected');
+	}
+
 	deviceName.value = device.productName;
 	state.value = states.READY;
 }
-
-const strokeDasharray = `${200 * Math.PI} ${200 * Math.PI}`;
-const progressCircle = computed(() => (1 - progress.value) * (200 * Math.PI))
 </script>
 
 <template>
 	<div v-if="webusbSupported">
+		<div v-if="!isLocalhost && state == states.WAITING_FOR_DEVICE">
+			<button @click="requestDevice">Connect</button>
+		</div>
+
 		<div v-if="state == states.READY">
 			<button type="button" @click="upgrade">Upgrade<br/>{{deviceName}}</button>
 		</div>
 
-		<div v-if="state == states.WAITING_FOR_DEVICE">
+		<div v-if="isLocalhost && state == states.WAITING_FOR_DEVICE">
 			<h1>Please connect a supported device</h1>
 		</div>
 
@@ -301,6 +330,7 @@ const progressCircle = computed(() => (1 - progress.value) * (200 * Math.PI))
 	<div v-if="!webusbSupported">
 		<p>This browser does not support WebUSB</p>
 	</div>
+	
 </template>
 
 <style scoped>
