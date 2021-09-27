@@ -211,14 +211,19 @@ async function download() {
 	if (!manifestationTolerant) {
 		console.info('Resetting device');
 
-		// Send 0 data to trigger device reset
-        await device.device_.controlTransferOut({
-            requestType: 'class',
-            recipient: 'interface',
-            request: DFU.DNLOAD,
-            value: 0,
-            index: device.intfNumber
-		});
+		// Send 0 data to trigger device reset.
+		// This might throw an inconsequential transfer error that can be ignored.
+		try {
+			await device.device_.controlTransferOut({
+				requestType: 'class',
+				recipient: 'interface',
+				request: DFU.DNLOAD,
+				value: 0,
+				index: device.intfNumber
+			});
+		} catch (error) {
+			// Pass
+		}
 
 		state.value = states.FINISHED;
 
@@ -240,7 +245,8 @@ if (typeof navigator.usb === 'undefined') {
 const strokeDasharray = `${200 * Math.PI} ${200 * Math.PI}`;
 const progressCircle = computed(() => (1 - progress.value) * (200 * Math.PI))
 
-let devices = await searchForCompatibleDevices();
+let devices = [];
+devices = await searchForCompatibleDevices();
 
 if (devices.length > 0) {
 	device = devices[0];
