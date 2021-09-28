@@ -15,6 +15,20 @@ Web application for updating firmware through DFU.
 - Backup the current `latest.bin`.
 - Replace `latest.bin` with the new firmware. The file name must stay the same.
 
+## Run locally
+
+This will run a local server and do automatic rebuild on file change.
+
+```bash
+$ npm run dev
+```
+
+## Building
+
+```bash
+$ npm run build
+```
+
 ## Staging
 
 Stage the app to [https://superlative-firmware.surge.sh/](https://superlative-firmware.surge.sh/) by running:

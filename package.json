@@ -5,7 +5,7 @@
     "dev": "vite",
     "build": "vite build",
     "serve": "vite preview",
-    "stage": "surge dist --domain https://superlative-firmware.surge.sh"
+    "stage": "vite build && surge dist --domain https://superlative-firmware.surge.sh"
   },
   "dependencies": {
     "vue": "^3.2.6",
