@@ -4,9 +4,8 @@ import {ref, reactive, computed} from 'vue';
 
 const vendorId = 0x0483;
 const compatibleDevices = [
-	0xDF11,
-	0xDF12,
-	0xDF13
+	0xDF11, // nucleo-g0b1re
+	0xDF12 // sb01
 ];
 
 let webusbSupported = true;
@@ -26,7 +25,7 @@ const states = reactive({
 	ERROR: 'error'
 });
 
-let state = ref(states.WAITING_FOR_DEVICE);
+let state = ref(states.WAITING_FOR_REQUEST);
 let deviceName = ref('');
 let progress = ref(0);
 
@@ -63,7 +62,7 @@ function onDisconnect(event) {
 	if (device === event.device) {
 		device.disconnected = true;
 		device = null;
-		state.value = states.WAITING_FOR_DEVICE;
+		state.value = states.WAITING_FOR_REQUEST;
 
 		console.info('USB device disconnected');
 	}
