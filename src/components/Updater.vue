@@ -230,7 +230,16 @@ async function download() {
 
 		onDisconnect({device: device});
 	}
- }
+}
+
+// Show warning when trying to unload page while programming
+window.onbeforeunload = () => {
+	if ([states.ERASING, states.DOWNLOADING].includes(state.value)) {
+		return true;
+	} else {
+		return null;
+	}
+};
 
 if (typeof navigator.usb === 'undefined') {
 	webusbSupported = false;
@@ -241,8 +250,7 @@ if (typeof navigator.usb === 'undefined') {
 </script>
 
 <script setup>
-const strokeDasharray = `${200 * Math.PI} ${200 * Math.PI}`;
-const progressCircle = computed(() => (1 - progress.value) * (200 * Math.PI))
+import CircularLoader from './CircularLoader.vue';
 
 let devices = [];
 devices = await searchForCompatibleDevices();
@@ -271,6 +279,9 @@ async function requestDevice() {
 		state.value = states.WAITING_FOR_REQUEST;
 	}
 }
+
+// setError('Some error occured!');
+// state.value = states.ERASING;
 </script>
 
 <template>
@@ -288,6 +299,8 @@ async function requestDevice() {
 		</div>
 
 		<div v-if="state == states.ERASING">
+			<CircularLoader :diameter="200" :thickness="4" :time="3000" />
+			<span>Erasing</span>
 		</div>
 
 		<div v-if="state == states.DOWNLOADING">
@@ -298,41 +311,21 @@ async function requestDevice() {
 			<span>Finished<br/><hr><small>Restarting<br/>device</small></span>
 		</div>
 
-		<div v-if="state == states.ERROR">
-			<p>{{errorMessage}}</p>
+		<div class="error" v-if="state == states.ERROR">
+			<span>{{errorMessage}}</span>
 		</div>
 
-		<svg
+		<CircularLoader
 			v-if="state == states.READY || state == states.DOWNLOADING || state == states.FINISHED"
-			class="progress"
-			width="200"
-			height="200"
-		>
-			<circle
-				stroke="#EEE"
-				stroke-width="4"
-				fill="transparent"
-				r="92"
-				cx="100"
-				cy="100"
-			/>
-			<circle
-				:style="{strokeDashoffset: progressCircle, strokeDasharray}"
-				class="progress-ring"
-				stroke="black"
-				stroke-width="4"
-				fill="transparent"
-				r="92"
-				cx="100"
-				cy="100"
-			/>
-		</svg>
+			:diameter="200"
+			:thickness="4"
+			:progress="progress"
+		/>
 	</div>
 
 	<div v-if="!webusbSupported">
 		<p>This browser does not support WebUSB</p>
 	</div>
-	
 </template>
 
 <style scoped>
@@ -354,21 +347,23 @@ span {
 	letter-spacing: 1px
 }
 
-svg {
+.circular-loader {
 	position: absolute;
-	top: calc(50% - 100px);
-	left: calc(50% - 100px);
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
 	z-index: 0;
 }
 
-div>div {
+div > div {
 	position: relative;
 	z-index: 1;
 }
 
-.progress-ring {
-	transition: 0.35s stroke-dashoffset;
-	transform: rotate(-90deg);
-	transform-origin: 50% 50%;
+.error {
+	padding: 10px 20px;
+	border-radius: 10px;
+	background-color: red;
+	color: white;
 }
 </style>

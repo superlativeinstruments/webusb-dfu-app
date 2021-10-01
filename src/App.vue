@@ -3,6 +3,8 @@ import Updater from './components/Updater.vue'
 </script>
 
 <template>
+	<header><span>Superlative</span></header>
+
 	<Suspense>
 		<template #default>
 			<Updater/>
@@ -28,5 +30,15 @@ html, body {
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
 	text-align: center;
+	width: 100%;
+}
+
+header {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	padding: 20px;
+	text-align: right;
 }
 </style>
