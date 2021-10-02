@@ -326,6 +326,8 @@ async function requestDevice() {
 	<div v-if="!webusbSupported">
 		<p>This browser does not support WebUSB</p>
 	</div>
+
+	<CircularLoader :diameter="200" :thickness="4" />
 </template>
 
 <style scoped>
