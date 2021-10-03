@@ -25,6 +25,8 @@ const states = reactive({
 	ERROR: 'error'
 });
 
+const showConnectionHelp = ref(false);
+
 let state = ref(states.WAITING_FOR_REQUEST);
 let deviceName = ref('');
 let progress = ref(0);
@@ -62,7 +64,10 @@ function onDisconnect(event) {
 	if (device === event.device) {
 		device.disconnected = true;
 		device = null;
-		state.value = states.WAITING_FOR_REQUEST;
+
+		if (state.value !== states.FINISHED) {
+			state.value = states.WAITING_FOR_REQUEST;
+		}
 
 		console.info('USB device disconnected');
 	}
@@ -251,6 +256,7 @@ if (typeof navigator.usb === 'undefined') {
 
 <script setup>
 import CircularLoader from './CircularLoader.vue';
+import CollapseTransition from '@ivanv/vue-collapse-transition/src/CollapseTransition.vue'
 
 let devices = [];
 devices = await searchForCompatibleDevices();
@@ -264,6 +270,8 @@ if (devices.length > 0) {
 }
 
 async function requestDevice() {
+	showConnectionHelp.value = false;
+
 	try {
 		device = await navigator.usb.requestDevice({
 			filters: compatibleDevices.map(element => {
@@ -276,12 +284,13 @@ async function requestDevice() {
 	} catch (error) {
 		console.error('No device selected');
 
-		state.value = states.WAITING_FOR_REQUEST;
+		showConnectionHelp.value = true;
 	}
 }
 
 // setError('Some error occured!');
-// state.value = states.ERASING;
+// deviceName.value = 'SB01';
+// state.value = states.WAITING_FOR_DEVICE;
 </script>
 
 <template>
@@ -299,7 +308,7 @@ async function requestDevice() {
 		</div>
 
 		<div v-if="state == states.ERASING">
-			<CircularLoader :diameter="200" :thickness="4" :time="3000" />
+			<CircularLoader :diameter="200" :thickness="4" />
 			<span>Erasing</span>
 		</div>
 
@@ -321,18 +330,42 @@ async function requestDevice() {
 			:thickness="4"
 			:progress="progress"
 		/>
+
+		<collapse-transition dimension="height" easing="ease-in-out" :duration="500">
+			<div v-show="showConnectionHelp">
+				<transition name="fade" appear>
+					<section class="connection-help" v-show="showConnectionHelp">
+						<div><img src="/iso_quotes.svg" alt=""></div>
+						<div>
+							<h2>Didn't see any devices in the connection menu?</h2>
+							<p> Make sure the SB01 is in firmware update mode<br/>by holding the <span class="orange">shift</span> button while powering on.</p>
+						</div>
+					</section>
+				</transition>
+			</div>
+		</collapse-transition>
 	</div>
 
 	<div v-if="!webusbSupported">
 		<p>This browser does not support WebUSB</p>
 	</div>
-
-	<CircularLoader :diameter="200" :thickness="4" />
 </template>
 
 <style scoped>
+.fade {
+	&-enter-active,
+	&-leave-active {
+		transition: opacity 500ms 250ms ease-in-out;
+	}
+
+	&-enter-from,
+	&-leave-to {
+		opacity: 0;
+	}
+}
+
 button {
-	background-color: black;
+	background-color: var(--black);
 	color: white;
 	border: none;
 	width: 150px;
@@ -342,9 +375,13 @@ button {
 	letter-spacing: 1px;
 	line-height: 1.2rem;
 	cursor: pointer;
+
+	&:hover {
+		opacity: 0.5;
+	}
 }
 
-span {
+div>span {
 	text-transform: uppercase;
 	letter-spacing: 1px
 }
@@ -362,10 +399,31 @@ div > div {
 	z-index: 1;
 }
 
+.connection-help {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	column-gap: 4rem;
+	align-items: center;
+	text-align: left;
+
+	&>div {
+		max-width: 600px;
+	}
+
+	&>div:first-child {
+		text-align: right;
+	}
+
+	img {
+		width: 100%;
+		height: auto;
+	}
+}
+
 .error {
 	padding: 10px 20px;
 	border-radius: 10px;
-	background-color: red;
+	background-color: var(--orange);
 	color: white;
 }
 </style>

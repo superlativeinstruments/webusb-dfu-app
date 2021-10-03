@@ -8,12 +8,16 @@
     "stage": "vite build && surge dist --domain https://superlative-firmware.surge.sh"
   },
   "dependencies": {
+    "@ivanv/vue-collapse-transition": "^1.0.2",
     "vue": "^3.2.6",
     "webdfu": "github:DinkDonk/webdfu#master"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^1.6.1",
     "@vue/compiler-sfc": "^3.2.6",
+    "autoprefixer": "^10.3.6",
+    "postcss-flexbugs-fixes": "^5.0.2",
+    "postcss-nested": "^5.0.6",
     "vite": "^2.5.4"
   }
 }
