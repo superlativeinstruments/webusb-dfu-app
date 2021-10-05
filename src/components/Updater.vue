@@ -22,6 +22,7 @@ const states = reactive({
 	ERASING: 'erasing',
 	DOWNLOADING: 'downloading',
 	FINISHED: 'finished',
+	RESTARTED: 'restarted',
 	ERROR: 'error'
 });
 
@@ -67,6 +68,10 @@ function onDisconnect(event) {
 
 		if (state.value !== states.FINISHED) {
 			state.value = states.WAITING_FOR_REQUEST;
+		}
+
+		if (state.value === states.FINISHED) {
+			state.value = states.RESTARTED;
 		}
 
 		console.info('USB device disconnected');
@@ -166,7 +171,6 @@ async function open(device) {
 
 	// Bind logging methods
 	device.logDebug = console.log;
-	// device.logInfo = console.info;
 	device.logInfo = info;
 	device.logWarning = console.warn;
 	device.logError = setError;
@@ -328,8 +332,8 @@ async function requestDevice() {
 			<span>Upgrading</span>
 		</div>
 
-		<div v-if="state == states.FINISHED">
-			<span>Finished<br/><hr><small>Restarting<br/>device</small></span>
+		<div v-if="state == states.FINISHED || state == states.RESTARTED">
+			<span>Finished<br/><span v-if="state == states.FINISHED"><hr><small>Restarting<br/>device</small></span></span>
 		</div>
 
 		<div class="error" v-if="state == states.ERROR">
@@ -337,7 +341,7 @@ async function requestDevice() {
 		</div>
 
 		<CircularLoader
-			v-if="state == states.DOWNLOADING || state == states.FINISHED"
+			v-if="state == states.DOWNLOADING || state == states.FINISHED || state == states.RESTARTED"
 			:diameter="200"
 			:thickness="4"
 			:progress="progress"
@@ -410,6 +414,10 @@ button {
 	&:hover {
 		opacity: 0.5;
 	}
+}
+
+hr {
+	width: 100px;
 }
 
 div > span {
