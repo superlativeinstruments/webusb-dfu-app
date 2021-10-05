@@ -303,8 +303,6 @@ async function requestDevice() {
 		showConnectionHelp.value = true;
 	}
 }
-
-webusbSupported.value = false;
 </script>
 
 <template>
