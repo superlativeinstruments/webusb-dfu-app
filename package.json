@@ -22,5 +22,5 @@
     "postcss-normalize": "^10.0.1",
     "vite": "^2.5.4"
   },
-  "browserslist": "last 2 versions"
+  "browserslist": "last 2 versions and supports webusb"
 }
