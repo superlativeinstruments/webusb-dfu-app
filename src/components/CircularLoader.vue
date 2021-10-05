@@ -1,5 +1,5 @@
 <script setup>
-import {ref, computed} from 'vue';
+import {ref, computed, watch} from 'vue';
 
 const props = defineProps({
 	diameter: Number,
@@ -8,11 +8,17 @@ const props = defineProps({
 	time: Number
 });
 
-const progress = ref(props.progress || 0);
+const progress = ref(0);
 const isEndless = ref(false);
 
 const strokeDasharray = computed(() => 2 * Math.PI * ((props.diameter  - props.thickness) / 2));
-let strokeDashoffset = computed(() => 2 * Math.PI * ((props.diameter  - props.thickness) / 2) * (1 - progress.value));
+let strokeDashoffset;
+
+if (typeof props.progress !== 'undefined') {
+	strokeDashoffset = computed(() => 2 * Math.PI * ((props.diameter  - props.thickness) / 2) * (1 - props.progress));
+} else {
+	strokeDashoffset = computed(() => 2 * Math.PI * ((props.diameter  - props.thickness) / 2) * (1 - progress.value));
+}
 
 if (typeof props.time !== 'undefined') {
 	const steps = props.time / 250;

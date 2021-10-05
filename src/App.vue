@@ -4,7 +4,8 @@ import Updater from './components/Updater.vue'
 
 <template>
 	<header>
-		<a href="https://playsuperlative.com/" target="_self"><img class="logo" src="/logo.svg" alt="Superlative™"></a>
+		<div>Firmware Updater</div>
+		<div><a href="https://playsuperlative.com/" target="_self"><img class="logo" src="/logo.svg" alt="Superlative™"></a></div>
 	</header>
 
 	<Suspense>
@@ -98,12 +99,35 @@ html, body {
 }
 
 header {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	column-gap: 4rem;
+	align-items: center;
 	position: fixed;
 	top: 0;
 	left: 0;
 	right: 0;
-	text-align: right;
 	padding: 1rem;
+	text-align: center;
+	text-transform: uppercase;
+	color: var(--GRAY);
+
+	& > div:first-child {
+		text-align: left;
+	}
+
+	& > div:last-child {
+		text-align: right;
+	}
+
+	.logo {
+		width: 2rem;
+		height: 2rem;
+
+		&:hover {
+			opacity: 0.5;
+		}
+	}
 }
 
 h1, h2, h3, h4, h5, h6 {
@@ -124,16 +148,5 @@ p {
 	font-family: 'SL-Light', Helvetica, Arial, sans-serif;
 	font-size: 25px;
 	line-height: 1.2;
-}
-
-header {
-	.logo {
-		width: 2rem;
-		height: 2rem;
-
-		&:hover {
-			opacity: 0.5;
-		}
-	}
 }
 </style>

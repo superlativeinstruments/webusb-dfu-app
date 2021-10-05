@@ -131,6 +131,15 @@ async function getDFUDescriptorProperties(device) {
 	}
 }
 
+function info(message) {
+	console.info(message);
+
+	if (message.startsWith('Copying')) {
+		progress.value = 0;
+		state.value = states.DOWNLOADING;
+	}
+}
+
 async function open(device) {
 	await device.open();
 	// Attempt to parse the DFU functional descriptor
@@ -157,7 +166,8 @@ async function open(device) {
 
 	// Bind logging methods
 	device.logDebug = console.log;
-	device.logInfo = console.info;
+	// device.logInfo = console.info;
+	device.logInfo = info;
 	device.logWarning = console.warn;
 	device.logError = setError;
 	device.logProgress = setProgress;
@@ -180,7 +190,7 @@ async function upgrade() {
 	if (interfaces.length == 0) {
 		setError('The selected device does not have any USB DFU interfaces.');
 	} else if (interfaces.length == 1) {
-		state.value = states.DOWNLOADING;
+		state.value = states.ERASING;
 
 		await fixInterfaceNames(device, interfaces);
 		device = await open(new DFU.Device(device, interfaces[0]));
@@ -287,10 +297,6 @@ async function requestDevice() {
 		showConnectionHelp.value = true;
 	}
 }
-
-// setError('Some error occured!');
-// deviceName.value = 'SB01';
-// state.value = states.WAITING_FOR_DEVICE;
 </script>
 
 <template>
@@ -325,17 +331,17 @@ async function requestDevice() {
 		</div>
 
 		<CircularLoader
-			v-if="state == states.READY || state == states.DOWNLOADING || state == states.FINISHED"
+			v-if="state == states.DOWNLOADING || state == states.FINISHED"
 			:diameter="200"
 			:thickness="4"
 			:progress="progress"
 		/>
 
 		<collapse-transition dimension="height" easing="ease-in-out" :duration="500">
-			<div v-show="showConnectionHelp">
+			<div class="test" v-show="showConnectionHelp && state == states.WAITING_FOR_REQUEST">
 				<transition name="fade" appear>
-					<section class="connection-help" v-show="showConnectionHelp">
-						<div><img src="/iso_quotes.svg" alt=""></div>
+					<section class="connection-help" v-show="showConnectionHelp && state == states.WAITING_FOR_REQUEST">
+						<div><img src="/iso_top.svg" alt=""></div>
 						<div>
 							<h2>Didn't see any devices in the connection menu?</h2>
 							<p> Make sure the SB01 is in firmware update mode<br/>by holding the <span class="orange">shift</span> button while powering on.</p>
@@ -352,15 +358,29 @@ async function requestDevice() {
 </template>
 
 <style scoped>
-.fade {
-	&-enter-active,
+.collapse {
 	&-leave-active {
-		transition: opacity 500ms 250ms ease-in-out;
+		overflow: visible;
+		transition: height 250ms 250ms, padding-top 250ms 250ms, padding-bottom 250ms 250ms !important;
+	}
+}
+
+.fade {
+	&-enter-active {
+		transition: opacity 500ms 250ms ease-in-out, transform 750ms 250ms ease-out;
+	}
+
+	&-leave-active {
+		transition: opacity 250ms ease-in-out;
 	}
 
 	&-enter-from,
 	&-leave-to {
 		opacity: 0;
+	}
+
+	&-enter-from {
+		transform: translate(0, 50px);
 	}
 }
 
@@ -381,7 +401,7 @@ button {
 	}
 }
 
-div>span {
+div > span {
 	text-transform: uppercase;
 	letter-spacing: 1px
 }
@@ -405,6 +425,8 @@ div > div {
 	column-gap: 4rem;
 	align-items: center;
 	text-align: left;
+	padding-top: 8rem;
+	padding-bottom: 8rem;
 
 	&>div {
 		max-width: 600px;
