@@ -18,7 +18,10 @@ import Updater from './components/Updater.vue'
 	</Suspense>
 </template>
 
-<style>
+<style lang="postcss">
+@import-normalize;
+@import-sanitize;
+
 :root {
 	--black: #141414;
 	--dark_gray: #232323;

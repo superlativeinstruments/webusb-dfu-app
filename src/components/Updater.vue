@@ -8,7 +8,7 @@ const compatibleDevices = [
 	0xDF12 // sb01
 ];
 
-let webusbSupported = true;
+let webusbSupported = ref(true);
 let device;
 let errorMessage = ref('');
 
@@ -257,7 +257,7 @@ window.onbeforeunload = () => {
 };
 
 if (typeof navigator.usb === 'undefined') {
-	webusbSupported = false;
+	webusbSupported.value = false;
 } else {
 	navigator.usb.addEventListener('connect', onConnect);
 	navigator.usb.addEventListener('disconnect', onDisconnect);
@@ -267,9 +267,15 @@ if (typeof navigator.usb === 'undefined') {
 <script setup>
 import CircularLoader from './CircularLoader.vue';
 import CollapseTransition from '@ivanv/vue-collapse-transition/src/CollapseTransition.vue'
+import operaLogo from 'browser-logos/src/opera/opera.svg';
+import chromeLogo from 'browser-logos/src/chrome/chrome.svg';
+import edgeLogo from 'browser-logos/src/edge/edge.svg';
 
 let devices = [];
-devices = await searchForCompatibleDevices();
+
+if (webusbSupported.value) {
+	devices = await searchForCompatibleDevices();
+}
 
 if (devices.length > 0) {
 	device = devices[0];
@@ -297,6 +303,8 @@ async function requestDevice() {
 		showConnectionHelp.value = true;
 	}
 }
+
+webusbSupported.value = false;
 </script>
 
 <template>
@@ -353,11 +361,16 @@ async function requestDevice() {
 	</div>
 
 	<div v-if="!webusbSupported">
-		<p>This browser does not support WebUSB</p>
+		<p>This browser is not supported.<br/>Try one of these:</p>
+		<ul class="browser-list">
+			<li><a href="https://www.opera.com/download" target="_blank"><img :src="operaLogo" alt="">Opera</a></li>
+			<li><a href="https://www.google.com/chrome/" target="_blank"><img :src="chromeLogo" alt="">Chrome</a></li>
+			<li><a href="https://www.microsoft.com/edge" target="_blank"><img :src="edgeLogo" alt="">Edge</a></li>
+		</ul>
 	</div>
 </template>
 
-<style scoped>
+<style lang="postcss" scoped>
 .collapse {
 	&-leave-active {
 		overflow: visible;
@@ -447,5 +460,25 @@ div > div {
 	border-radius: 10px;
 	background-color: var(--orange);
 	color: white;
+}
+
+.browser-list {
+	list-style: none;
+	display: grid;
+	grid-template-columns: 1fr 1fr 1fr;
+	column-gap: 2rem;
+
+	img {
+		margin-bottom: 1rem;
+	}
+	a {
+		color: var(--black);
+		text-decoration: none;
+		text-transform: uppercase;
+
+		&:hover {
+			color: var(--gray);
+		}
+	}
 }
 </style>

@@ -77,7 +77,7 @@ if (typeof props.progress === 'undefined' && typeof props.time === 'undefined') 
 </svg>
 </template>
 
-<style scoped>
+<style lang="postcss" scoped>
 .progress-ring {
 	transition: 0.25s linear stroke-dashoffset;
 }
