@@ -303,6 +303,7 @@ async function requestDevice() {
 		showConnectionHelp.value = true;
 	}
 }
+webusbSupported.value = false;
 </script>
 
 <template>
@@ -465,6 +466,9 @@ div > div {
 	display: grid;
 	grid-template-columns: repeat(3, 1fr);
 	column-gap: 2rem;
+	max-width: 400px;
+	margin: 0 auto;
+	padding: 0;
 
 	img {
 		margin-bottom: 1rem;
