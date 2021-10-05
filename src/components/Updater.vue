@@ -338,6 +338,7 @@ async function requestDevice() {
 
 		<div class="error" v-if="state == states.ERROR">
 			<span>{{errorMessage}}</span>
+			<p>Don't worry. The device is fine. Try going through the update process one more time.</p>
 		</div>
 
 		<CircularLoader
@@ -462,6 +463,9 @@ div > div {
 }
 
 .error {
+	display: inline-block;
+	max-width: 600px;
+	margin: 0 auto;
 	padding: 10px 20px;
 	border-radius: 10px;
 	background-color: var(--orange);
