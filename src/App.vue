@@ -62,6 +62,7 @@ import Updater from './components/Updater.vue'
 	src: url('/fonts/Superlative-Light.woff2') format('woff2');
 	font-weight: normal;
 	font-style: normal;
+	font-display: block;
 }
 
 @font-face{
@@ -69,6 +70,7 @@ import Updater from './components/Updater.vue'
 	src: url('/fonts/Superlative-Regular.woff2') format('woff2');
 	font-weight: normal;
 	font-style: normal;
+	font-display: block;
 }
 
 @font-face{
@@ -76,6 +78,7 @@ import Updater from './components/Updater.vue'
 	src: url('/fonts/Superlative-RegularCondensed.woff2') format('woff2');
 	font-weight: normal;
 	font-style: normal;
+	font-display: block;
 }
 
 html, body {
