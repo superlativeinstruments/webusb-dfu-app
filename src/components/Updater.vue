@@ -344,7 +344,7 @@ async function requestDevice() {
 		/>
 
 		<collapse-transition dimension="height" easing="ease-in-out" :duration="500">
-			<div class="test" v-show="showConnectionHelp && state == states.WAITING_FOR_REQUEST">
+			<div v-show="showConnectionHelp && state == states.WAITING_FOR_REQUEST">
 				<transition name="fade" appear>
 					<section class="connection-help" v-show="showConnectionHelp && state == states.WAITING_FOR_REQUEST">
 						<div><img src="/iso_top.svg" alt=""></div>
@@ -432,19 +432,19 @@ div > div {
 
 .connection-help {
 	display: grid;
-	grid-template-columns: 1fr 1fr;
+	grid-template-columns: repeat(auto-fit, minmax(calc(500px - 2rem), 1fr));
 	column-gap: 4rem;
+	row-gap: 2rem;
 	align-items: center;
+	justify-items: center;
 	text-align: left;
 	padding-top: 8rem;
 	padding-bottom: 8rem;
+	max-width: 1280px;
+	margin: 0 auto;
 
 	&>div {
-		max-width: 600px;
-	}
-
-	&>div:first-child {
-		text-align: right;
+		width: 100%;
 	}
 
 	img {
@@ -463,7 +463,7 @@ div > div {
 .browser-list {
 	list-style: none;
 	display: grid;
-	grid-template-columns: 1fr 1fr 1fr;
+	grid-template-columns: repeat(3, 1fr);
 	column-gap: 2rem;
 
 	img {
