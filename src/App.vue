@@ -5,7 +5,11 @@ import Updater from './components/Updater.vue'
 <template>
 	<header>
 		<div>Firmware Updater</div>
-		<div><a href="https://playsuperlative.com/" target="_self"><img class="logo" src="/logo.svg" alt="Superlative™"></a></div>
+		<div>
+			<a href="https://playsuperlative.com/" target="_self">
+				<img class="logo" src="/logo.svg" alt="Superlative™">
+			</a>
+		</div>
 	</header>
 
 	<Suspense>
@@ -13,7 +17,7 @@ import Updater from './components/Updater.vue'
 			<Updater/>
 		</template>
 		<template #fallback>
-			<h1>Loading...</h1>
+			<h2>Loading...</h2>
 		</template>
 	</Suspense>
 </template>

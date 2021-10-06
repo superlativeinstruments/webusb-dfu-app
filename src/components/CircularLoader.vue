@@ -101,4 +101,3 @@ if (typeof props.progress === 'undefined' && typeof props.time === 'undefined') 
 	}
 }
 </style>
-

@@ -452,7 +452,7 @@ div > div {
 	max-width: 1280px;
 	margin: 0 auto;
 
-	&>div {
+	& > div {
 		width: 100%;
 	}
 
@@ -484,6 +484,7 @@ div > div {
 	img {
 		margin-bottom: 1rem;
 	}
+
 	a {
 		color: var(--black);
 		text-decoration: none;
