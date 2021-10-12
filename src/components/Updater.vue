@@ -1,6 +1,6 @@
 <script>
 import {DFU, DFUse} from 'webdfu';
-import {ref, reactive, computed} from 'vue';
+import {ref, reactive} from 'vue';
 
 const vendorId = 0x0483;
 const compatibleDevices = [
