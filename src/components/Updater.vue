@@ -5,7 +5,8 @@ import {ref, reactive} from 'vue';
 const vendorId = 0x0483;
 const compatibleDevices = [
 	0xDF11, // nucleo-g0b1re
-	0xDF12 // sb01
+	0xA417, // SB01
+	0xA418, // CICADA
 ];
 
 let webusbSupported = ref(true);
@@ -206,6 +207,7 @@ async function upgrade() {
 
 async function findLatestFirmware() {
 	const response = await fetch(`${deviceName.value.toLowerCase()}/latest.bin`);
+	console.log(`Found firmware ${deviceName.value.toLowerCase()}/latest.bin`);
 	return await response.arrayBuffer();
 }
 
