@@ -20,21 +20,25 @@ Web application for updating firmware through DFU.
 This will run a local server and do automatic rebuild on file change.
 
 ```bash
-$ npm run dev
+$ pnpm run dev
 ```
 
 ## 🔧 Building
 
 ```bash
-$ npm run build
+$ pnpm run build
 ```
 
 ## 📽️ Staging
 
 Stage the app to [https://superlative-firmware.surge.sh/](https://superlative-firmware.surge.sh/) by running:
 ```bash
-$ npm run stage
+$ pnpm run stage
 ```
+
+## 📡 Deployment
+
+The project is automatically deployed to [firmware.playsuperlative.com](https://firmware.playsuperlative.com/) on push to main branch via Vercel.
 
 ## ❤️‍🩹 Troubleshooting / Known issues
 
