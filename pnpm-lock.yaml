@@ -15,8 +15,8 @@ dependencies:
     specifier: ^3.2.6
     version: 3.4.21
   webdfu:
-    specifier: github:DinkDonk/webdfu#master
-    version: github.com/DinkDonk/webdfu/5613bfde9cd26fa5f676497c5d6b47da13e47025
+    specifier: github:DinkDonk/webdfu#main
+    version: github.com/DinkDonk/webdfu/c583d19004c21aa0f6090237998cb0a8783896c8
 
 devDependencies:
   '@vitejs/plugin-vue':
@@ -636,8 +636,8 @@ packages:
       '@vue/shared': 3.4.21
     dev: false
 
-  github.com/DinkDonk/webdfu/5613bfde9cd26fa5f676497c5d6b47da13e47025:
-    resolution: {tarball: https://codeload.github.com/DinkDonk/webdfu/tar.gz/5613bfde9cd26fa5f676497c5d6b47da13e47025}
+  github.com/DinkDonk/webdfu/c583d19004c21aa0f6090237998cb0a8783896c8:
+    resolution: {tarball: https://codeload.github.com/DinkDonk/webdfu/tar.gz/c583d19004c21aa0f6090237998cb0a8783896c8}
     name: webdfu
     version: 1.0.5
     dev: false

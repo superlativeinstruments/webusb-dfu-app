@@ -189,6 +189,8 @@ async function open(device) {
 	return device;
 }
 
+let retries = 0;
+
 async function upgrade() {
 	let interfaces = DFU.findDeviceDfuInterfaces(device);
 
@@ -199,10 +201,33 @@ async function upgrade() {
 
 		await fixInterfaceNames(device, interfaces);
 		device = await open(new DFU.Device(device, interfaces[0]));
-		await download();
+		try {
+			await download();
+		} catch (error) {
+			retries++;
+
+			let devices = await searchForCompatibleDevices();
+
+			if (devices.length > 0) {
+				device = devices[0];
+				deviceName.value = device.productName;
+				state.value = states.READY;
+			}
+
+			await timeout(500);
+
+			if (retries < 10) {
+
+				return upgrade();
+			} else {
+				setError('Failed to upgrade device. Refresh and try again');
+			}
+		}
 	} else {
 		setError('Multiple DFU interfaces is not supported')
 	}
+
+	retries = 0;
 }
 
 async function findLatestFirmware() {
