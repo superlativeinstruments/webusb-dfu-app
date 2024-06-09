@@ -28,6 +28,7 @@ const states = reactive({
 });
 
 const showConnectionHelp = ref(false);
+const notInBootloaderMode = ref(false);
 
 let state = ref(states.WAITING_FOR_REQUEST);
 let deviceName = ref('');
@@ -81,7 +82,18 @@ function onDisconnect(event) {
 
 async function searchForCompatibleDevices() {
 	let devices = await navigator.usb.getDevices();
-	devices = devices.filter(device => (device.vendorId == vendorId && compatibleDevices.includes(device.productId)));
+	devices = devices.filter(device => (
+		device.vendorId == vendorId &&
+		compatibleDevices.includes(device.productId)
+	));
+
+	if (devices.length > 0 && devices[0].deviceClass !== 0x00) {
+		notInBootloaderMode.value = true;
+
+		return [];
+	} else {
+		notInBootloaderMode.value = false;
+	}
 
 	return devices;
 }
@@ -325,6 +337,16 @@ async function requestDevice() {
 				return {vendorId,  productId: element};
 			})
 		});
+
+		if (device.deviceClass !== 0x00) {
+			notInBootloaderMode.value = true;
+			state.value = states.WAITING_FOR_REQUEST;
+			device = null;
+
+			return;
+		} else {
+			notInBootloaderMode.value = false;
+		}
 		
 		deviceName.value = device.productName;
 		state.value = states.READY;
@@ -382,7 +404,21 @@ async function requestDevice() {
 						<div><img src="/iso_top.svg" alt=""></div>
 						<div>
 							<h2>Didn't see any devices in the connection menu?</h2>
-							<p> Make sure the SB01 is in firmware update mode<br/>by holding the <span class="orange">shift</span> button while powering on.</p>
+							<p>Make sure the SB01 is in firmware update mode<br/>by holding the <span class="orange">shift</span> button while powering on.</p>
+						</div>
+					</section>
+				</transition>
+			</div>
+		</collapse-transition>
+
+		<collapse-transition dimension="height" easing="ease-in-out" :duration="500">
+			<div v-show="notInBootloaderMode && state == states.WAITING_FOR_REQUEST">
+				<transition name="fade" appear>
+					<section class="connection-help" v-show="notInBootloaderMode && state == states.WAITING_FOR_REQUEST">
+						<div><img src="/iso_top.svg" alt=""></div>
+						<div>
+							<h2>The SB01 is not in firmware update mode</h2>
+							<p>Make sure the SB01 is in firmware update mode<br/>by holding the <span class="orange">shift</span> button while powering on.</p>
 						</div>
 					</section>
 				</transition>
