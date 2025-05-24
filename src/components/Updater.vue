@@ -33,6 +33,7 @@ const notInBootloaderMode = ref(false);
 let state = ref(states.WAITING_FOR_REQUEST);
 let deviceName = ref('');
 let progress = ref(0);
+let selectBeta = ref(false);
 
 function setError(error) {
 	state.value = states.ERROR;
@@ -248,6 +249,12 @@ async function findLatestFirmware() {
 	return await response.arrayBuffer();
 }
 
+async function findLatestBetaFirmware() {
+	const response = await fetch(`${deviceName.value.toLowerCase()}/latest-beta.bin`);
+	console.log(`Found beta firmware ${deviceName.value.toLowerCase()}/latest-beta.bin`);
+	return await response.arrayBuffer();
+}
+
 async function download() {
 	try {
 		let status = await device.getStatus();
@@ -259,7 +266,13 @@ async function download() {
 		setError('Failed to clear status');
 	}
 
-	const file = await findLatestFirmware();
+	let file;
+
+	if (selectBeta.value) {
+		file = await findLatestBetaFirmware();
+	} else {
+		file = await findLatestFirmware();
+	}
 
 	await device.do_download(transferSize, file, manifestationTolerant);
 
@@ -289,6 +302,14 @@ async function download() {
 		onDisconnect({device: device});
 	}
 }
+
+document.addEventListener('keydown', (event) => {
+	// Register shortcut for CMD/CTRL + B to select beta firmware
+	if ((event.metaKey || event.ctrlKey) && event.key === 'b') {
+		event.preventDefault();
+		selectBeta.value = !selectBeta.value;
+	}
+});
 
 // Show warning when trying to unload page while programming
 window.onbeforeunload = () => {
@@ -365,7 +386,13 @@ async function requestDevice() {
 		</div>
 
 		<div v-if="state == states.READY">
-			<button type="button" @click="upgrade">Upgrade<br/>{{deviceName}}</button>
+			<button type="button" @click="upgrade">
+				Upgrade<br/>
+				{{deviceName}}
+				<span v-if="selectBeta" class="beta">
+					<br/>(beta)
+				</span>
+			</button>
 		</div>
 
 		<div v-if="state == states.WAITING_FOR_DEVICE">
@@ -557,5 +584,10 @@ div > div {
 			color: var(--gray);
 		}
 	}
+}
+
+.beta {
+	color: var(--orange);
+	font-size: 0.8rem;
 }
 </style>
