@@ -230,7 +230,6 @@ async function upgrade() {
 			await timeout(500);
 
 			if (retries < 10) {
-
 				return upgrade();
 			} else {
 				setError('Failed to upgrade device. Refresh and try again');
