@@ -16,6 +16,10 @@ let errorMessage = ref('');
 let manifestationTolerant = true;
 let transferSize = 1024;
 
+let firmwareStartAddress;
+let userConfigAddress = 0x0803F800; // Last page
+let userConfigSize = 256; // Size of user config in bytes
+
 const states = reactive({
 	WAITING_FOR_REQUEST: 'waitingForRequest',
 	WAITING_FOR_DEVICE: 'waitingForDevice',
@@ -196,6 +200,7 @@ async function open(device) {
 
 		if (segment) {
 			device.startAddress = segment.start;
+			firmwareStartAddress = segment.start;
 		}
 	}
 
@@ -214,6 +219,7 @@ async function upgrade() {
 
 		await fixInterfaceNames(device, interfaces);
 		device = await open(new DFU.Device(device, interfaces[0]));
+
 		try {
 			await download();
 		} catch (error) {
@@ -254,7 +260,151 @@ async function findLatestBetaFirmware() {
 	return await response.arrayBuffer();
 }
 
+async function printDataAsHex(data) {
+	let uint8Array;
+	
+	// Handle different input types
+	if (data instanceof Blob) {
+		const arrayBuffer = await data.arrayBuffer();
+		uint8Array = new Uint8Array(arrayBuffer);
+	} else if (data instanceof ArrayBuffer) {
+		uint8Array = new Uint8Array(data);
+	} else if (data instanceof Uint8Array) {
+		uint8Array = data;
+	} else {
+		throw new Error('Input must be a Blob, ArrayBuffer, or Uint8Array');
+	}
+	
+	let hexString = '';
+	for (let i = 0; i < uint8Array.length; i += 16) {
+		// Address column
+		const address = i.toString(16).padStart(8, '0').toUpperCase();
+		hexString += `${address}: `;
+		// Hex bytes (16 per line)
+		let hexBytes = '';
+		let asciiChars = '';
+		for (let j = 0; j < 16; j++) {
+			if (i + j < uint8Array.length) {
+				const byte = uint8Array[i + j];
+				hexBytes += byte.toString(16).padStart(2, '0').toUpperCase() + ' ';
+				// ASCII representation (printable chars only)
+				asciiChars += (byte >= 32 && byte <= 126) ? String.fromCharCode(byte) : '.';
+			} else {
+				hexBytes += '   '; // 3 spaces for missing bytes
+				asciiChars += ' ';
+			}
+		}
+		hexString += hexBytes + ' |' + asciiChars + '|\n';
+	}
+	console.log(hexString);
+	return hexString;
+}
+
+function storeArrayBuffer(key, arrayBuffer) {
+    const uint8Array = new Uint8Array(arrayBuffer);
+    const binaryString = Array.from(uint8Array)
+        .map(byte => String.fromCharCode(byte))
+        .join('');
+    const base64String = btoa(binaryString);
+    localStorage.setItem(key, base64String);
+}
+
+function getArrayBuffer(key) {
+    const base64String = localStorage.getItem(key);
+    if (!base64String) return null;
+    
+    const binaryString = atob(base64String);
+    const uint8Array = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+        uint8Array[i] = binaryString.charCodeAt(i);
+    }
+    return uint8Array.buffer;
+}
+
+async function readUserConfig() {
+	try {
+		let status = await device.getStatus();
+
+		if (status.state.value == DFU.dfuERROR) {
+			await device.clearStatus();
+		}
+	} catch (error) {
+		setError('Failed to clear status');
+	}
+
+	try {
+		device.startAddress = userConfigAddress;
+		let userConfig = await device.do_upload(userConfigSize, userConfigSize);
+		console.info('User config read successfully');
+		await printDataAsHex(userConfig);
+		// Save user config to local storage
+		const userConfigArrayBuffer = await userConfig.arrayBuffer();
+
+		// If first byte is 0xFF, don't store it
+		if (
+			userConfigArrayBuffer.byteLength === 0 ||
+			new Uint8Array(userConfigArrayBuffer)[0] === 0xFF
+		) {
+			console.info('User config is empty, not storing in local storage');
+
+			return false;
+		}
+
+		storeArrayBuffer('userConfig', userConfigArrayBuffer);
+
+		return true;
+	} catch (error) {
+		console.error('Failed to read user config:', error);
+	}
+}
+
+async function writeUserConfig(config) {
+	// Load user config from local storage if not provided
+	if (!config) {
+		const storedConfig = getArrayBuffer('userConfig');
+		if (storedConfig) {
+			config = new Uint8Array(storedConfig);
+			console.info('Loaded user config from local storage');
+		} else {
+			config = new Uint8Array(userConfigSize).fill(0xFF); // Default to zeroed config if not found
+			console.info('No user config found in local storage, using default');
+		}
+	} else {
+		config = new Uint8Array(config); // Ensure config is a Uint8Array
+		console.info('Using provided user config');
+	}
+
+	// If first byte is 0xFF (empty config), do nothing and exit
+	if (config[0] === 0xFF) {
+		console.info('User config is empty, skipping write');
+
+		return;
+	}
+
+	try {
+		let status = await device.getStatus();
+
+		if (status.state.value == DFU.dfuERROR) {
+			await device.clearStatus();
+		}
+	} catch (error) {
+		setError('Failed to clear status');
+	}
+
+	try {
+		device.startAddress = userConfigAddress;
+		await device.do_download(userConfigSize, config, manifestationTolerant, true);
+		console.info('User config written successfully');
+	} catch (error) {
+		console.error('Failed to write user config:', error);
+	}
+}
+
 async function download() {
+	await readUserConfig();
+
+	device.startAddress = firmwareStartAddress;
+
 	try {
 		let status = await device.getStatus();
 
@@ -274,6 +424,12 @@ async function download() {
 	}
 
 	await device.do_download(transferSize, file, manifestationTolerant);
+	const configFound = await readUserConfig();
+
+	// Restore user config from local srorage if it was erased
+	if (!configFound) {
+		await writeUserConfig(null);
+	}
 
 	console.info('Download done');
 

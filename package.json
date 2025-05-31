@@ -10,17 +10,17 @@
   "dependencies": {
     "@ivanv/vue-collapse-transition": "^1.0.2",
     "browser-logos": "github:alrra/browser-logos#70.3.1",
-    "vue": "^3.2.6",
+    "vue": "^3.5.16",
     "webdfu": "github:DinkDonk/webdfu#main"
   },
   "devDependencies": {
-    "@vitejs/plugin-vue": "^1.6.1",
-    "@vue/compiler-sfc": "^3.2.6",
-    "autoprefixer": "^10.3.6",
+    "@vitejs/plugin-vue": "^1.10.2",
+    "@vue/compiler-sfc": "^3.5.16",
+    "autoprefixer": "^10.4.21",
     "postcss-flexbugs-fixes": "^5.0.2",
     "postcss-nested": "^5.0.6",
     "postcss-normalize": "^10.0.1",
-    "vite": "^2.5.4"
+    "vite": "^2.9.18"
   },
   "browserslist": "last 2 versions and supports webusb"
 }
