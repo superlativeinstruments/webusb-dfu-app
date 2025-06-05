@@ -2,6 +2,8 @@
 import {DFU, DFUse} from 'webdfu';
 import {ref, reactive} from 'vue';
 
+const restoreUserConfig = false; // Whether to restore user config after firmware update
+
 const vendorId = 0x0483;
 const compatibleDevices = [
 	0xDF11, // nucleo-g0b1re
@@ -223,6 +225,7 @@ async function upgrade() {
 		try {
 			await download();
 		} catch (error) {
+			console.error('Error during download:', error);
 			retries++;
 
 			let devices = await searchForCompatibleDevices();
@@ -401,7 +404,9 @@ async function writeUserConfig(config) {
 }
 
 async function download() {
-	await readUserConfig();
+	if (restoreUserConfig) {
+		await readUserConfig();
+	}
 
 	device.startAddress = firmwareStartAddress;
 
@@ -424,10 +429,15 @@ async function download() {
 	}
 
 	await device.do_download(transferSize, file, manifestationTolerant);
-	const configFound = await readUserConfig();
+
+	let configFound = false;
+
+	if (restoreUserConfig) {
+		configFound = await readUserConfig();
+	}
 
 	// Restore user config from local srorage if it was erased
-	if (!configFound) {
+	if (!configFound && restoreUserConfig) {
 		await writeUserConfig(null);
 	}
 
