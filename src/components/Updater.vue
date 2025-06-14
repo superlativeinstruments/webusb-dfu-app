@@ -580,6 +580,8 @@ async function requestDevice() {
 		<div class="error" v-if="state == states.ERROR">
 			<span>{{errorMessage}}</span>
 			<p>Don't worry. The device is fine. Try going through the update process one more time.</p>
+			<p>It's recommended to connect directly to the computer and not via USB hub.</p>
+			<p>If you're still having problems try another USB cable and USB port.</p>
 		</div>
 
 		<CircularLoader
