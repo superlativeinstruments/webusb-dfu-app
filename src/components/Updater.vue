@@ -4,11 +4,10 @@ import {ref, reactive} from 'vue';
 
 const restoreUserConfig = false; // Whether to restore user config after firmware update
 
-const vendorId = 0x0483;
 const compatibleDevices = [
-	0xDF11, // nucleo-g0b1re
-	0xA417, // SB01
-	0xA418, // CICADA
+	{vendorId: 0x0483, productId: 0xDF11}, // nucleo-g0b1re
+	{vendorId: 0x0483, productId: 0xA417}, // SB01
+	{vendorId: 0x16D0, productId: 0x1456}, // CICADA
 ];
 
 let webusbSupported = ref(true);
@@ -90,8 +89,10 @@ function onDisconnect(event) {
 async function searchForCompatibleDevices() {
 	let devices = await navigator.usb.getDevices();
 	devices = devices.filter(device => (
-		device.vendorId == vendorId &&
-		compatibleDevices.includes(device.productId)
+		compatibleDevices.find(d => (
+			device.vendorId == d.vendorId && 
+			device.productId == d.productId
+		))
 	));
 
 	if (devices.length > 0 && devices[0].deviceClass !== 0x00) {
@@ -519,9 +520,7 @@ async function requestDevice() {
 
 	try {
 		device = await navigator.usb.requestDevice({
-			filters: compatibleDevices.map(element => {
-				return {vendorId,  productId: element};
-			})
+			filters: compatibleDevices
 		});
 
 		if (device.deviceClass !== 0x00) {
