@@ -29,6 +29,7 @@ const states = reactive({
 	DOWNLOADING: 'downloading',
 	FINISHED: 'finished',
 	RESTARTED: 'restarted',
+	UPGRADE_NOT_NEEDED: 'upgradeNotNeeded',
 	ERROR: 'error'
 });
 
@@ -39,6 +40,7 @@ let state = ref(states.WAITING_FOR_REQUEST);
 let deviceName = ref('');
 let progress = ref(0);
 let selectBeta = ref(false);
+let latestBuildDate = ref(null);
 
 function setError(error) {
 	state.value = states.ERROR;
@@ -264,6 +266,24 @@ async function findLatestBetaFirmware() {
 	return await response.arrayBuffer();
 }
 
+async function findLatestFirmwareDate() {
+	const firmware = await findLatestFirmware();
+	if (firmware.byteLength < 512) {
+		throw new Error('Firmware is too small to contain build info');
+	}
+	const buildInfo = new Uint8Array(firmware.slice(0, 512));
+	const buildInfoString = new TextDecoder().decode(buildInfo);
+	const buildTimeMatch = buildInfoString.match(/<<<BUILD_TIME:(.*?)>>>/);
+	if (buildTimeMatch) {
+		const buildTime = `${buildTimeMatch[1]} UTC`;
+		const buildDate = new Date(buildTime);
+		console.info('Build time:', buildDate.toISOString());
+		return buildDate;
+	} else {
+		throw new Error('Build time not found in build info');
+	}
+}
+
 async function printDataAsHex(data) {
 	let uint8Array;
 	
@@ -362,6 +382,37 @@ async function readUserConfig() {
 	}
 }
 
+async function readBuildInfo() {
+	try {
+		let status = await device.getStatus();
+
+		if (status.state.value == DFU.dfuERROR) {
+			await device.clearStatus();
+		}
+	} catch (error) {
+		setError('Failed to clear status');
+	}
+
+	try {
+		device.startAddress = firmwareStartAddress;
+		let buildInfo = await device.do_upload(256, 256);
+		let buildInfoString = await buildInfo.text();
+		const buildTimeMatch = buildInfoString.match(/<<<BUILD_TIME:(.*?)>>>/);
+
+		if (buildTimeMatch) {
+			const buildTime = `${buildTimeMatch[1]} UTC`;
+			// Return build time as a Date object
+			const buildDate = new Date(buildTime);
+			console.info('Build time:', buildDate.toISOString());
+			return buildDate;
+		} else {
+			throw new Error('Build time not found in build info');
+		}
+	} catch (error) {
+		console.error('Failed to read build info:', error);
+	}
+}
+
 async function writeUserConfig(config) {
 	// Load user config from local storage if not provided
 	if (!config) {
@@ -405,6 +456,24 @@ async function writeUserConfig(config) {
 }
 
 async function download() {
+	let deviceBuildDate = new Date('1970-01-01T00:00:00Z'); // Default to epoch if no build date is found
+
+	try {
+		deviceBuildDate = await readBuildInfo();
+	} catch (error) {
+		console.error('Failed to read build info:', error);
+	}
+
+	if (!latestBuildDate.value || (latestBuildDate.value && deviceBuildDate < latestBuildDate.value)) {
+		console.warn('Device build date is older than the latest firmware build date');
+	} else {
+		console.info('Device is already up to date');
+		state.value = states.UPGRADE_NOT_NEEDED;
+		return;
+	}
+
+	return;
+
 	if (restoreUserConfig) {
 		await readUserConfig();
 	}
@@ -511,6 +580,13 @@ if (devices.length > 0) {
 	device = devices[0];
 	deviceName.value = device.productName;
 	state.value = states.READY;
+
+	try {
+		const date = await findLatestFirmwareDate();
+		latestBuildDate.value = date;
+	} catch (error) {
+		console.error('Failed to find latest firmware date:', error);
+	}
 } else {
 	state.value = states.WAITING_FOR_REQUEST;
 }
@@ -576,6 +652,14 @@ async function requestDevice() {
 			<span>Finished<br/><span v-if="state == states.FINISHED"><hr><small>Restarting<br/>device</small></span></span>
 		</div>
 
+		<div v-if="state == states.UPGRADE_NOT_NEEDED">
+			<span>
+				<span>Update not needed</span>
+				<hr>
+				<small>device is already<br>running the latest<br>firmware</small>
+			</span>
+		</div>
+
 		<div class="error" v-if="state == states.ERROR">
 			<span>{{errorMessage}}</span>
 			<p>Don't worry. The device is fine. Try going through the update process one more time.</p>
@@ -627,6 +711,10 @@ async function requestDevice() {
 			<li><a href="https://www.microsoft.com/edge" target="_blank"><img :src="edgeLogo" alt="">Edge</a></li>
 		</ul>
 	</div>
+
+	<footer>
+		<span v-if="latestBuildDate">Latest build date: {{latestBuildDate.toUTCString()}}</span>
+	</footer>
 </template>
 
 <style lang="postcss" scoped>
@@ -755,5 +843,16 @@ div > div {
 .beta {
 	color: var(--orange);
 	font-size: 0.8rem;
+}
+
+footer {
+	position: fixed;
+	bottom: 0;
+	right: 0;
+	text-align: right;
+	text-transform: uppercase;
+	margin: 1rem;
+	font-size: 1rem;
+	color: var(--gray);
 }
 </style>
