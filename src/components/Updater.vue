@@ -271,7 +271,30 @@ async function findLatestFirmwareDate() {
 	if (firmware.byteLength < 512) {
 		throw new Error('Firmware is too small to contain build info');
 	}
-	const buildInfo = new Uint8Array(firmware.slice(0, 512));
+	const firmwareHeader = new Uint8Array(firmware.slice(0, 512));
+	let buildInfoAddress = 0;
+	for (let i = 0; i < firmwareHeader.length - 3; i++) {
+		if (
+			firmwareHeader [i] == 0x3C &&
+			firmwareHeader [i + 1] == 0x3C &&
+			firmwareHeader [i + 2] == 0x3C
+		) {
+			// Build address is a uint32_t at i + 3
+			// This is the address where the build info starts
+			buildInfoAddress = firmwareHeader[i + 3] |
+				(firmwareHeader[i + 4] << 8) |
+				(firmwareHeader[i + 5] << 16) |
+				(firmwareHeader[i + 6] << 24);
+			buildInfoAddress -= 0x08004800; // Subtract the base address of the firmware
+			break;
+		}
+	}
+
+	if (buildInfoAddress === 0) {
+		throw new Error('Build info address not found in firmware header');
+	}
+
+	const buildInfo = firmware.slice(buildInfoAddress, firmware.byteLength);
 	const buildInfoString = new TextDecoder().decode(buildInfo);
 	const buildTimeMatch = buildInfoString.match(/<<<BUILD_TIME:(.*?)>>>/);
 	if (buildTimeMatch) {
@@ -395,13 +418,39 @@ async function readBuildInfo() {
 
 	try {
 		device.startAddress = firmwareStartAddress;
-		let buildInfo = await device.do_upload(256, 256);
-		let buildInfoString = await buildInfo.text();
-		const buildTimeMatch = buildInfoString.match(/<<<BUILD_TIME:(.*?)>>>/);
+		let firmwareHeader = await device.do_upload(512, 512);
+		firmwareHeader = await firmwareHeader.arrayBuffer();
+		firmwareHeader = new Uint8Array(firmwareHeader);
+		let buildInfoAddress = 0;
+		for (let i = 0; i < firmwareHeader.length - 3; i++) {
+			if (
+				firmwareHeader [i] == 0x3C &&
+				firmwareHeader [i + 1] == 0x3C &&
+				firmwareHeader [i + 2] == 0x3C
+			) {
+				// Build address is a uint32_t at i + 3
+				// This is the address where the build info starts
+				buildInfoAddress = firmwareHeader[i + 3] |
+					(firmwareHeader[i + 4] << 8) |
+					(firmwareHeader[i + 5] << 16) |
+					(firmwareHeader[i + 6] << 24);
+				break;
+			}
+		}
 
+		console.info('Build info address:', buildInfoAddress.toString(16));
+
+		if (buildInfoAddress === 0) {
+			return new Date('1970-01-01T00:00:00Z');
+		}
+
+		device.startAddress = buildInfoAddress;
+		let buildInfo  = await device.do_upload(64, 64);
+		buildInfo = await buildInfo.arrayBuffer();
+		const buildInfoString = new TextDecoder().decode(buildInfo);
+		const buildTimeMatch = buildInfoString.match(/<<<BUILD_TIME:(.*?)>>>/);
 		if (buildTimeMatch) {
 			const buildTime = `${buildTimeMatch[1]} UTC`;
-			// Return build time as a Date object
 			const buildDate = new Date(buildTime);
 			console.info('Build time:', buildDate.toISOString());
 			return buildDate;
@@ -456,7 +505,7 @@ async function writeUserConfig(config) {
 }
 
 async function download() {
-	let deviceBuildDate = new Date('1970-01-01T00:00:00Z'); // Default to epoch if no build date is found
+	let deviceBuildDate;
 
 	try {
 		deviceBuildDate = await readBuildInfo();
@@ -464,15 +513,15 @@ async function download() {
 		console.error('Failed to read build info:', error);
 	}
 
-	if (!latestBuildDate.value || (latestBuildDate.value && deviceBuildDate < latestBuildDate.value)) {
+	if (
+		!latestBuildDate.value ||
+		(latestBuildDate.value && deviceBuildDate && deviceBuildDate < latestBuildDate.value)) {
 		console.warn('Device build date is older than the latest firmware build date');
 	} else {
 		console.info('Device is already up to date');
 		state.value = states.UPGRADE_NOT_NEEDED;
 		return;
 	}
-
-	return;
 
 	if (restoreUserConfig) {
 		await readUserConfig();
