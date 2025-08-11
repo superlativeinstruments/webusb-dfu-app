@@ -517,7 +517,7 @@ async function download() {
 		!latestBuildDate.value ||
 		(latestBuildDate.value && deviceBuildDate && deviceBuildDate < latestBuildDate.value)) {
 		console.warn('Device build date is older than the latest firmware build date');
-	} else {
+	} else if (!selectBeta.value) {
 		console.info('Device is already up to date');
 		state.value = states.UPGRADE_NOT_NEEDED;
 		return;
