@@ -91,6 +91,9 @@ async function loadChangeLog() {
 
 	try {
 		const response = await fetch(fileName);
+		if (response.status !== 200) {
+			throw new Error('Changelog not found');
+		}
 		const text = await response.text();
 		const html = marked.parse(text);
 		changelogHtml.value = html;
