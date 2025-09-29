@@ -1,6 +1,9 @@
 <script>
 import {DFU, DFUse} from 'webdfu';
-import {ref, reactive} from 'vue';
+import {ref, reactive, watch} from 'vue';
+import {marked} from 'marked';
+
+const openBetaActive = ref(false);
 
 const restoreUserConfig = false; // Whether to restore user config after firmware update
 
@@ -38,9 +41,63 @@ const notInBootloaderMode = ref(false);
 
 let state = ref(states.WAITING_FOR_REQUEST);
 let deviceName = ref('');
+let deviceVersion = ref('');
 let progress = ref(0);
 let selectBeta = ref(false);
 let latestBuildDate = ref(null);
+let changelogHtml = ref('');
+let openChangelog = ref(false);
+
+watch(selectBeta, async (newValue, oldValue) => {
+	try {
+		latestBuildDate.value = await findLatestFirmwareDate();
+	} catch (error) {
+		latestBuildDate.value = null;
+		console.error('Failed to find latest firmware date:', error);
+	}
+
+	try {
+		await loadChangeLog();
+	} catch (error) {
+		changelogHtml.value = '';
+		console.error('Failed to load changelog:', error);
+	}
+});
+
+watch(state, async (newState) => {
+	if (newState === states.READY) {
+		try {
+			latestBuildDate.value = await findLatestFirmwareDate();
+		} catch (error) {
+			latestBuildDate.value = null;
+			console.error('Failed to find latest firmware date:', error);
+		}
+
+		try {
+			await loadChangeLog();
+		} catch (error) {
+			changelogHtml.value = '';
+			console.error('Failed to load changelog:', error);
+		}
+	}
+});
+
+async function loadChangeLog() {
+	let fileName = `${deviceName.value.toLowerCase()}/latest-changelog.md`;
+
+	if (selectBeta.value) {
+		fileName = `${deviceName.value.toLowerCase()}/latest-beta-changelog.md`;
+	}
+
+	try {
+		const response = await fetch(fileName);
+		const text = await response.text();
+		const html = marked.parse(text);
+		changelogHtml.value = html;
+	} catch (error) {
+		console.error('Failed to load changelog:', error);
+	}
+}
 
 function setError(error) {
 	state.value = states.ERROR;
@@ -63,6 +120,7 @@ async function onConnect() {
 	if (devices.length > 0) {
 		device = devices[0];
 		deviceName.value = device.productName;
+		deviceVersion.value = device.deviceVersionMajor;
 		progress.value = 0;
 		state.value = states.READY;
 
@@ -236,6 +294,7 @@ async function upgrade() {
 			if (devices.length > 0) {
 				device = devices[0];
 				deviceName.value = device.productName;
+				deviceVersion.value = device.deviceVersionMajor;
 				state.value = states.READY;
 			}
 
@@ -267,12 +326,21 @@ async function findLatestBetaFirmware() {
 }
 
 async function findLatestFirmwareDate() {
-	const firmware = await findLatestFirmware();
+	let firmware;
+
+	if (selectBeta.value) {
+		firmware = await findLatestBetaFirmware();
+	} else {
+		firmware = await findLatestFirmware();
+	}
+
 	if (firmware.byteLength < 512) {
 		throw new Error('Firmware is too small to contain build info');
 	}
+
 	const firmwareHeader = new Uint8Array(firmware.slice(0, 512));
 	let buildInfoAddress = 0;
+
 	for (let i = 0; i < firmwareHeader.length - 3; i++) {
 		if (
 			firmwareHeader [i] == 0x3C &&
@@ -506,6 +574,7 @@ async function writeUserConfig(config) {
 
 async function download() {
 	let deviceBuildDate;
+	let resetUserConfig = false;
 
 	try {
 		deviceBuildDate = await readBuildInfo();
@@ -522,6 +591,13 @@ async function download() {
 		state.value = states.UPGRADE_NOT_NEEDED;
 		return;
 	}
+
+	if (deviceBuildDate && deviceBuildDate < new Date('2025-09-29T14:27:56Z')) {
+		console.warn('Device build date is older than 2025-09-29, user config will be reset');
+		resetUserConfig = true;
+	}
+
+	return;
 
 	if (restoreUserConfig) {
 		await readUserConfig();
@@ -556,8 +632,10 @@ async function download() {
 	}
 
 	// Restore user config from local srorage if it was erased
-	if (!configFound && restoreUserConfig) {
+	if (!configFound && restoreUserConfig && !resetUserConfig) {
 		await writeUserConfig(null);
+	} else if (restoreUserConfig) {
+		await writeUserConfig(new Uint8Array(userConfigSize).fill(0xFF));
 	}
 
 	console.info('Download done');
@@ -628,6 +706,7 @@ if (webusbSupported.value) {
 if (devices.length > 0) {
 	device = devices[0];
 	deviceName.value = device.productName;
+	deviceVersion.value = device.deviceVersionMajor;
 	state.value = states.READY;
 
 	try {
@@ -659,7 +738,15 @@ async function requestDevice() {
 		}
 		
 		deviceName.value = device.productName;
+		deviceVersion.value = device.deviceVersionMajor;
 		state.value = states.READY;
+
+		try {
+			const date = await findLatestFirmwareDate();
+			latestBuildDate.value = date;
+		} catch (error) {
+			console.error('Failed to find latest firmware date:', error);
+		}
 	} catch (error) {
 		console.error('No device selected');
 
@@ -681,6 +768,11 @@ async function requestDevice() {
 				<span v-if="selectBeta" class="beta">
 					<br/>(beta)
 				</span>
+			</button>
+
+			<button v-if="openBetaActive" class="btn-beta" type="button" @click="selectBeta = !selectBeta">
+				<span v-if="!selectBeta">switch to beta firmware</span>
+				<span v-else>switch to stable firmware</span>
 			</button>
 		</div>
 
@@ -763,8 +855,29 @@ async function requestDevice() {
 
 	<footer>
 		<span v-if="latestBuildDate">Latest build date: {{latestBuildDate.toUTCString()}}</span>
+		<button v-if="changelogHtml" @click="openChangelog = !openChangelog" class="btn-changelog">
+			<span v-if="!openChangelog">Show changelog</span>
+			<span v-else>Hide changelog</span>
+		</button>
 	</footer>
+
+	<collapse-transition dimension="height" easing="ease-in-out" :duration="500">
+		<div v-show="changelogHtml && openChangelog" class="changelog-container">
+			<transition name="fade" appear>
+				<div v-show="changelogHtml && openChangelog" class="changelog" v-html="changelogHtml"></div>
+			</transition>
+		</div>
+	</collapse-transition>
 </template>
+
+<style>
+code {
+	background-color: var(--light-gray);
+	padding: 2px 4px;
+	border-radius: 4px;
+	font-family: 'Courier New', Courier, monospace;
+}
+</style>
 
 <style lang="postcss" scoped>
 .collapse {
@@ -793,6 +906,18 @@ async function requestDevice() {
 	}
 }
 
+.changelog-container {
+	max-width: 40rem;
+	padding: 1rem;
+	margin: 0 auto;
+}
+
+.changelog {
+	overflow: auto;
+	padding: 2rem;
+	text-align: left;
+}
+
 button {
 	background-color: var(--black);
 	color: white;
@@ -807,6 +932,41 @@ button {
 
 	&:hover {
 		opacity: 0.5;
+	}
+}
+
+.btn-beta {
+	display: block;
+	background-color: transparent;
+	color: var(--black);
+	border: 1px solid var(--black);
+	width: auto;
+	height: auto;
+	border-radius: 5px;
+	padding: 5px 10px;
+	font-size: 0.8rem;
+	margin: 0 auto;
+	margin-top: 3rem;
+
+	&:hover {
+		background-color: var(--black);
+		color: white;
+	}
+}
+
+.btn-changelog {
+	background-color: transparent;
+	color: var(--gray);
+	border: 1px solid var(--gray);
+	width: auto;
+	height: auto;
+	border-radius: 5px;
+	padding: 5px 10px;
+	font-size: 0.8rem;
+
+	&:hover {
+		background-color: var(--gray);
+		color: white;
 	}
 }
 
@@ -895,6 +1055,10 @@ div > div {
 }
 
 footer {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	align-items: center;
+	gap: 1rem;
 	position: fixed;
 	bottom: 0;
 	right: 0;
