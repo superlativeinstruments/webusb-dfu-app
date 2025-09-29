@@ -601,8 +601,6 @@ async function download() {
 		resetUserConfig = true;
 	}
 
-	return;
-
 	if (restoreUserConfig) {
 		await readUserConfig();
 	}
