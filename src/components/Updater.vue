@@ -3,7 +3,7 @@ import {DFU, DFUse} from 'webdfu';
 import {ref, reactive, watch} from 'vue';
 import {marked} from 'marked';
 
-const openBetaActive = ref(false);
+const openBetaActive = ref(true);
 
 const restoreUserConfig = false; // Whether to restore user config after firmware update
 
