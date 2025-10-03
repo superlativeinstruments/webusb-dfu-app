@@ -1,15 +1,16 @@
 ### Improvements
 
-- Total rework of the internal MIDI engine.
+- Total firmware rework for improved midi performance.
 - MIDI input pitch bend support.
 - MIDI song selection support to load sequencer patterns.
 - Revised configuration system with simplified MIDI options.
 - New arpeggiator `Caterpillar` up/down modes.
 - New arpeggiator `Corner` mode.
 - New `Chord` mode (MIDI output).
-- New sequencer `Reset` function.
+- New `Reset` function for sequencer.
 - Removed unused USB MIDI port.
-- Firmware version now displays in the control panel app and firmware update app.
+- Firmware version display in control panel and firmware update app.
+
 
 ### Fixes
 
