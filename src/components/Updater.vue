@@ -2,6 +2,14 @@
 import {DFU, DFUse} from 'webdfu';
 import {ref, reactive, watch} from 'vue';
 import {marked} from 'marked';
+import {getLatestRelease, getLatestPrerelease} from '../services/GitHub.js';
+
+try {
+	const {file, releaseDateTime} = await getLatestPrerelease('SB01');
+	console.log('Latest beta release:', file, releaseDateTime);
+} catch (error) {
+	console.error('Failed to get latest beta release:', error);
+}
 
 const openBetaActive = ref(true);
 
