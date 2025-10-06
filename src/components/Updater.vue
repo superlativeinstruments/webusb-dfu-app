@@ -2,24 +2,16 @@
 import {DFU, DFUse} from 'webdfu';
 import {ref, reactive, watch} from 'vue';
 import {marked} from 'marked';
-import {getLatestRelease, getLatestPrerelease} from '../services/GitHub.js';
-
-try {
-	const {file, releaseDateTime} = await getLatestPrerelease('SB01');
-	console.log('Latest beta release:', file, releaseDateTime);
-} catch (error) {
-	console.error('Failed to get latest beta release:', error);
-}
+import {getLatestRelease, getLatestPrerelease, downloadAsset} from '../services/GitHub.js';
 
 const openBetaActive = ref(true);
 
-const restoreUserConfig = false; // Whether to restore user config after firmware update
-
 const compatibleDevices = [
-	{vendorId: 0x0483, productId: 0xDF11}, // nucleo-g0b1re
 	{vendorId: 0x0483, productId: 0xA417}, // SB01
 	{vendorId: 0x16D0, productId: 0x1456}, // CICADA
 ];
+
+const restoreUserConfig = false; // Whether to restore user config after firmware update
 
 let webusbSupported = ref(true);
 let device;
@@ -57,15 +49,19 @@ let changelogHtml = ref('');
 let openChangelog = ref(false);
 
 watch(selectBeta, async (newValue, oldValue) => {
+	let changelogPath;
+
 	try {
-		latestBuildDate.value = await findLatestFirmwareDate();
+		const {binary, changelog, releaseDateTime} = await getLatestFirmware(deviceName.value, newValue);
+		changelogPath = changelog;
+		latestBuildDate.value = releaseDateTime;
 	} catch (error) {
 		latestBuildDate.value = null;
 		console.error('Failed to find latest firmware date:', error);
 	}
 
 	try {
-		await loadChangeLog();
+		await loadChangeLog(changelogPath);
 	} catch (error) {
 		changelogHtml.value = '';
 		console.error('Failed to load changelog:', error);
@@ -74,31 +70,43 @@ watch(selectBeta, async (newValue, oldValue) => {
 
 watch(state, async (newState) => {
 	if (newState === states.READY) {
+		let changelogPath;
 		try {
-			latestBuildDate.value = await findLatestFirmwareDate();
+			const {binary, changelog, releaseDateTime} = await getLatestFirmware(deviceName.value, selectBeta.value);
+			changelogPath = changelog;
+			latestBuildDate.value = releaseDateTime;
 		} catch (error) {
 			latestBuildDate.value = null;
 			console.error('Failed to find latest firmware date:', error);
 		}
 
 		try {
-			await loadChangeLog();
+			await loadChangeLog(changelogPath);
 		} catch (error) {
 			changelogHtml.value = '';
+			openChangelog.value = false;
 			console.error('Failed to load changelog:', error);
 		}
 	}
 });
 
-async function loadChangeLog() {
-	let fileName = `${deviceName.value.toLowerCase()}/latest-changelog.md`;
-
-	if (selectBeta.value) {
-		fileName = `${deviceName.value.toLowerCase()}/latest-beta-changelog.md`;
+async function loadChangeLog(path) {
+	if (!path) {
+		throw new Error('No changelog path provided');
 	}
 
 	try {
-		const response = await fetch(fileName);
+		if (path.startsWith('http')) {
+			// Download from GitHub
+			const buffer = await downloadAsset(path);
+			const text = new TextDecoder().decode(buffer);
+			const html = marked.parse(text);
+			changelogHtml.value = html;
+
+			return;
+		}
+
+		const response = await fetch(path);
 		if (response.status !== 200) {
 			changelogHtml.value = '';
 			throw new Error('Changelog not found');
@@ -325,32 +333,87 @@ async function upgrade() {
 	retries = 0;
 }
 
-async function findLatestFirmware() {
-	const response = await fetch(`${deviceName.value.toLowerCase()}/latest.bin`);
-	console.log(`Found firmware ${deviceName.value.toLowerCase()}/latest.bin`);
-	return await response.arrayBuffer();
-}
-
-async function findLatestBetaFirmware() {
-	const response = await fetch(`${deviceName.value.toLowerCase()}/latest-beta.bin`);
-	console.log(`Found beta firmware ${deviceName.value.toLowerCase()}/latest-beta.bin`);
-	return await response.arrayBuffer();
-}
-
-async function findLatestFirmwareDate() {
-	let firmware;
-
-	if (selectBeta.value) {
-		firmware = await findLatestBetaFirmware();
-	} else {
-		firmware = await findLatestFirmware();
+/**
+ * Finds the latest firmware from GitHub. Falls back to local files if release not found.
+ * @param {string} deviceName - The name of the device (e.g., 'SB01').
+ * @param {boolean} beta - Whether to look for beta (prerelease) firmware.
+ * @returns {Object} An object containing the binary URL, changelog URL, and release date.
+ */
+async function getLatestFirmware(deviceName, beta = false) {
+	console.log(`Looking for latest ${beta ? 'beta' : 'stable'} firmware for ${deviceName}`);
+	try {
+		if (beta) {
+			return await getLatestPrerelease(deviceName);
+		} else {
+			return await getLatestRelease(deviceName);
+		}
+	} catch (error) {
+		// Ignore error and fall back to local files
 	}
 
-	if (firmware.byteLength < 512) {
+	try {
+		if (beta) {
+			console.log('Falling back to local beta firmware');
+			const filePath = `${deviceName.toLowerCase()}/latest-beta.bin`;
+			const buffer = await loadFirmware(filePath);
+			let releaseDateTime;
+
+			try {
+				releaseDateTime = await getReleaseDateFromBinary(buffer);
+			} catch (error) {
+				// ignore error (releasedatetime is not defined in early firmware versions)
+			}
+
+			return {
+				binary: filePath,
+				changelog: `${deviceName.toLowerCase()}/latest-beta-changelog.md`,
+				releaseDateTime
+			};
+		} else {
+			console.log('Falling back to local stable firmware');
+			const filePath = `${deviceName.toLowerCase()}/latest.bin`;
+			const buffer = await loadFirmware(filePath);
+			let releaseDateTime;
+
+			try {
+				releaseDateTime = await getReleaseDateFromBinary(buffer);
+			} catch (error) {
+				// ignore error (releasedatetime is not defined in early firmware versions)
+			}
+
+			return {
+				binary: filePath,
+				changelog: `${deviceName.toLowerCase()}/latest-changelog.md`,
+				releaseDateTime
+			};
+		}
+	} catch (error) {
+		throw new Error('Failed to get latest local firmware', {cause: error});
+	}
+}
+
+async function loadFirmware(path) {
+	if (path.startsWith('http')) {
+		// Download from GitHub
+		return await downloadAsset(path);
+	}
+
+	const response = await fetch(path);
+	console.log(`Found firmware ${path}`);
+	return await response.arrayBuffer();
+}
+
+/**
+ * Extracts the release date from the firmware binary.
+ * @param {ArrayBuffer} buffer - The firmware binary data.
+ * @returns {Date} - The release date of the firmware.
+ */
+async function getReleaseDateFromBinary(buffer) {
+	if (buffer.byteLength < 512) {
 		throw new Error('Firmware is too small to contain build info');
 	}
 
-	const firmwareHeader = new Uint8Array(firmware.slice(0, 512));
+	const firmwareHeader = new Uint8Array(buffer.slice(0, 512));
 	let buildInfoAddress = 0;
 
 	for (let i = 0; i < firmwareHeader.length - 3; i++) {
@@ -374,7 +437,7 @@ async function findLatestFirmwareDate() {
 		throw new Error('Build info address not found in firmware header');
 	}
 
-	const buildInfo = firmware.slice(buildInfoAddress, firmware.byteLength);
+	const buildInfo = buffer.slice(buildInfoAddress, buffer.byteLength);
 	const buildInfoString = new TextDecoder().decode(buildInfo);
 	const buildTimeMatch = buildInfoString.match(/<<<BUILD_TIME:(.*?)>>>/);
 	if (buildTimeMatch) {
@@ -625,13 +688,9 @@ async function download() {
 		setError('Failed to clear status');
 	}
 
-	let file;
+	const {binary, changelog, releaseDateTime} = await getLatestFirmware(deviceName.value, selectBeta.value);
 
-	if (selectBeta.value) {
-		file = await findLatestBetaFirmware();
-	} else {
-		file = await findLatestFirmware();
-	}
+	const file = await loadFirmware(binary);
 
 	await device.do_download(transferSize, file, manifestationTolerant);
 
@@ -720,9 +779,10 @@ if (devices.length > 0) {
 	state.value = states.READY;
 
 	try {
-		const date = await findLatestFirmwareDate();
-		latestBuildDate.value = date;
+		const {binary, changelog, releaseDateTime} = await getLatestFirmware(deviceName.value, selectBeta.value);
+		latestBuildDate.value = releaseDateTime;
 	} catch (error) {
+		latestBuildDate.value = null;
 		console.error('Failed to find latest firmware date:', error);
 	}
 } else {
@@ -752,9 +812,10 @@ async function requestDevice() {
 		state.value = states.READY;
 
 		try {
-			const date = await findLatestFirmwareDate();
-			latestBuildDate.value = date;
+			const {binary, changelog, releaseDateTime} = await getLatestFirmware(deviceName.value, selectBeta.value);
+			latestBuildDate.value = releaseDateTime;
 		} catch (error) {
+			latestBuildDate.value = null;
 			console.error('Failed to find latest firmware date:', error);
 		}
 	} catch (error) {
@@ -829,7 +890,7 @@ async function requestDevice() {
 			<div v-show="showConnectionHelp && state == states.WAITING_FOR_REQUEST">
 				<transition name="fade" appear>
 					<section class="connection-help" v-show="showConnectionHelp && state == states.WAITING_FOR_REQUEST">
-						<div><img src="/iso_top.svg" alt=""></div>
+						<div><img src="/sb01-top.svg" alt=""></div>
 						<div>
 							<h2>Didn't see any devices in the connection menu?</h2>
 							<p>Make sure the SB01 is in firmware update mode<br/>by holding the <span class="orange">shift</span> button while powering on.</p>
@@ -843,7 +904,7 @@ async function requestDevice() {
 			<div v-show="notInBootloaderMode && state == states.WAITING_FOR_REQUEST">
 				<transition name="fade" appear>
 					<section class="connection-help" v-show="notInBootloaderMode && state == states.WAITING_FOR_REQUEST">
-						<div><img src="/iso_top.svg" alt=""></div>
+						<div><img src="/sb01-top.svg" alt=""></div>
 						<div>
 							<h2>The SB01 is not in firmware update mode</h2>
 							<p>Make sure the SB01 is in firmware update mode<br/>by holding the <span class="orange">shift</span> button while powering on.</p>
@@ -886,6 +947,24 @@ code {
 	padding: 2px 4px;
 	border-radius: 4px;
 	font-family: 'Courier New', Courier, monospace;
+}
+
+.changelog h1 {
+	text-align: center;
+	font-size: 1.5rem;
+	margin-bottom: 1rem;
+}
+
+.changelog h2 {
+	font-size: 1.25rem;
+	margin-top: 4rem;
+	margin-bottom: 1rem;
+}
+
+.changelog h3 {
+	font-size: 1.1rem;
+	margin-top: 2rem;
+	margin-bottom: 1rem;
 }
 </style>
 
@@ -1065,6 +1144,8 @@ div > div {
 }
 
 footer {
+	position: relative;
+	z-index: 2;
 	display: grid;
 	grid-template-columns: 1fr auto;
 	align-items: center;
