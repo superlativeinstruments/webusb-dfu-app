@@ -160,4 +160,35 @@ p {
 	font-size: 25px;
 	line-height: 1.2;
 }
+
+code {
+	font-family: 'SL-Regular-Condensed', Helvetica, Arial, sans-serif;
+	font-variant-ligatures: common-ligatures;
+}
+
+.changelog {
+	font-family: 'SL-Regular', Helvetica, Arial, sans-serif;
+}
+
+.changelog h1 {
+	text-align: center;
+	font-size: 1.5rem;
+	letter-spacing: 0.1rem;
+	margin-bottom: 1rem;
+}
+
+.changelog h2 {
+	font-size: 1.1rem;
+	letter-spacing: 0.1rem;
+	margin-top: 4rem;
+	padding-bottom: 1rem;
+	border-bottom: 1px solid var(--light_gray);
+}
+
+.changelog h3 {
+	font-size: 1rem;
+	letter-spacing: 0.1rem;
+	margin-top: 2rem;
+	margin-bottom: 1rem;
+}
 </style>

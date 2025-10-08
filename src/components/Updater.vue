@@ -941,33 +941,6 @@ async function requestDevice() {
 	</collapse-transition>
 </template>
 
-<style>
-code {
-	background-color: var(--light-gray);
-	padding: 2px 4px;
-	border-radius: 4px;
-	font-family: 'Courier New', Courier, monospace;
-}
-
-.changelog h1 {
-	text-align: center;
-	font-size: 1.5rem;
-	margin-bottom: 1rem;
-}
-
-.changelog h2 {
-	font-size: 1.25rem;
-	margin-top: 4rem;
-	margin-bottom: 1rem;
-}
-
-.changelog h3 {
-	font-size: 1.1rem;
-	margin-top: 2rem;
-	margin-bottom: 1rem;
-}
-</style>
-
 <style lang="postcss" scoped>
 .collapse {
 	&-leave-active {
