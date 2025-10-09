@@ -1,4 +1,4 @@
-const proxyUrl = 'https://ancient-brook-1e5c.rune-697.workers.dev';
+const proxyUrl = 'https://githubproxy.bishbashbosh.work';
 
 export async function getLatestRelease(device) {
 	const url = 'https://api.github.com/repos/superlativeinstruments/firmware-releases/releases/latest';
