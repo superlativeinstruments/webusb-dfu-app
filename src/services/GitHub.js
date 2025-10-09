@@ -3,7 +3,7 @@ const proxyUrl = 'https://githubproxy.bishbashbosh.work';
 export async function getLatestRelease(device) {
 	const url = 'https://api.github.com/repos/superlativeinstruments/firmware-releases/releases/latest';
 	const headers = {
-		'User-Agent': 'SuperlativeFirmwareUpdater/1.0'
+		'User-Agent': 'SuperlativeFirmwareUpdater/2.0'
 	};
 
 	const release = await fetch(`${proxyUrl}?url=${encodeURIComponent(url)}`, {headers}).then(_ => _.json());
@@ -18,7 +18,7 @@ export async function getLatestRelease(device) {
 export async function getLatestPrerelease(device) {
 	const url = 'https://api.github.com/repos/superlativeinstruments/firmware-releases/releases';
 	const headers = {
-		'User-Agent': 'SuperlativeFirmwareUpdater/1.0'
+		'User-Agent': 'SuperlativeFirmwareUpdater/2.0'
 	};
 
 	const releases = await fetch(`${proxyUrl}?url=${encodeURIComponent(url)}`, {headers}).then(_ => _.json());
