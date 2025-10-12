@@ -667,8 +667,12 @@ async function download() {
 		return;
 	}
 
-	if (deviceBuildDate && deviceBuildDate < new Date('2025-09-29T14:27:56Z')) {
-		console.warn('Device build date is older than 2025-09-29, user config will be reset');
+	if (
+		deviceBuildDate &&
+		(deviceBuildDate < new Date('2025-09-29T14:27:56Z') ||
+		deviceBuildDate < new Date('2025-10-11T13:00:00Z'))
+	) {
+		console.warn('Device build date dictates that user config must be reset');
 		resetUserConfig = true;
 	}
 
