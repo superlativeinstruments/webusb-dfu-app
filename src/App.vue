@@ -1,5 +1,5 @@
 <script setup>
-import Updater from './components/Updater.vue'
+import Updater from './components/Updater.vue';
 </script>
 
 <template>
@@ -12,6 +12,7 @@ import Updater from './components/Updater.vue'
 		</div>
 	</header>
 
+	<main>
 	<Suspense>
 		<template #default>
 			<Updater/>
@@ -20,6 +21,7 @@ import Updater from './components/Updater.vue'
 			<h2>Loading...</h2>
 		</template>
 	</Suspense>
+	</main>
 </template>
 
 <style lang="postcss">
@@ -90,23 +92,25 @@ import Updater from './components/Updater.vue'
 
 html, body {
 	background-color: white;
-	display: flex;
-	align-items: center;
-	justify-content: center;
+	display: grid;
+	grid-template-rows: 60px auto;
 	width: 100%;
-	height: 100%;
+	min-height: 100vh;
 	position: relative;
 	padding: 0;
 	margin: 0;
-}
-
-#app {
 	font-family: 'SL-Regular-Condensed', Helvetica, Arial, sans-serif;
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
-	text-align: center;
+}
+
+main {
+	display: grid;
+	margin: auto;
 	width: 100%;
-	padding: 1rem;
+	height: auto;
+	padding: 0;
+	text-align: center;
 }
 
 header {
@@ -114,14 +118,11 @@ header {
 	grid-template-columns: 1fr 1fr;
 	column-gap: 4rem;
 	align-items: center;
-	position: fixed;
-	top: 0;
-	left: 0;
-	right: 0;
+	max-height: 60px;
 	padding: 1rem;
 	text-align: center;
 	text-transform: uppercase;
-	color: var(--GRAY);
+	color: var(--gray);
 
 	& > div:first-child {
 		text-align: left;
@@ -148,11 +149,11 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 h1 {
-	font-size: 90px;
+	font-size: 3rem;
 }
 
 h2 {
-	font-size: 45px;
+	font-size: 2.4rem;
 }
 
 p {

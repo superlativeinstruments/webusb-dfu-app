@@ -831,7 +831,7 @@ async function requestDevice() {
 </script>
 
 <template>
-	<div v-if="webusbSupported">
+	<div v-if="webusbSupported" class="container">
 		<div v-if="state == states.WAITING_FOR_REQUEST">
 			<button @click="requestDevice">Connect</button>
 		</div>
@@ -852,7 +852,7 @@ async function requestDevice() {
 		</div>
 
 		<div v-if="state == states.WAITING_FOR_DEVICE">
-			<h1>Please connect a supported device</h1>
+			<h2>Please connect a supported device</h2>
 		</div>
 
 		<div v-if="state == states.ERASING">
@@ -929,11 +929,15 @@ async function requestDevice() {
 	</div>
 
 	<footer>
-		<span v-if="latestBuildDate">Latest build date: {{latestBuildDate.toUTCString()}}</span>
-		<button v-if="changelogHtml" @click="openChangelog = !openChangelog" class="btn-changelog">
-			<span v-if="!openChangelog">Show changelog</span>
-			<span v-else>Hide changelog</span>
-		</button>
+		<Transition name="fade">
+			<span v-if="latestBuildDate">Latest build date: {{latestBuildDate.toUTCString()}}</span>
+		</Transition>
+		<Transition name="fade">
+			<button v-if="changelogHtml" @click="openChangelog = !openChangelog" class="btn-changelog">
+				<span v-if="!openChangelog">Show changelog</span>
+				<span v-else>Hide changelog</span>
+			</button>
+		</Transition>
 	</footer>
 
 	<collapse-transition dimension="height" easing="ease-in-out" :duration="500">
@@ -946,6 +950,11 @@ async function requestDevice() {
 </template>
 
 <style lang="postcss" scoped>
+.container {
+	display: grid;
+	position: relative;
+}
+
 .collapse {
 	&-leave-active {
 		overflow: visible;
@@ -1135,5 +1144,15 @@ footer {
 	margin: 1rem;
 	font-size: 1rem;
 	color: var(--gray);
+}
+
+.fade-enter-active,
+.fade-leave-active {
+	transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+	opacity: 0;
 }
 </style>
