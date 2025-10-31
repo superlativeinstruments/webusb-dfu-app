@@ -4,7 +4,7 @@ import {ref, reactive, watch} from 'vue';
 import {marked} from 'marked';
 import {getLatestRelease, getLatestPrerelease, downloadAsset} from '../services/GitHub.js';
 
-const openBetaActive = ref(true);
+const openBetaActive = ref(false);
 
 const compatibleDevices = [
 	{vendorId: 0x0483, productId: 0xA417}, // SB01
@@ -648,7 +648,7 @@ async function writeUserConfig(config) {
 }
 
 async function download() {
-	let deviceBuildDate;
+	let deviceBuildDate = new Date('1970-01-01T00:00:00Z');
 	let resetUserConfig = false;
 
 	try {
@@ -659,7 +659,7 @@ async function download() {
 
 	if (
 		!latestBuildDate.value ||
-		(latestBuildDate.value && deviceBuildDate && deviceBuildDate < latestBuildDate.value)) {
+		(latestBuildDate.value && deviceBuildDate < latestBuildDate.value)) {
 		console.warn('Device build date is older than the latest firmware build date');
 	} else if (!selectBeta.value) {
 		console.info('Device is already up to date');
