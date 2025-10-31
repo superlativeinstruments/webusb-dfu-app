@@ -601,7 +601,7 @@ async function readBuildInfo() {
 			throw new Error('Build time not found in build info');
 		}
 	} catch (error) {
-		console.error('Failed to read build info:', error);
+		throw new Error('Failed to read build info:', {cause: error});
 	}
 }
 
@@ -655,6 +655,7 @@ async function download() {
 		deviceBuildDate = await readBuildInfo();
 	} catch (error) {
 		console.error('Failed to read build info:', error);
+		deviceBuildDate = new Date('1970-01-01T00:00:00Z');
 	}
 
 	if (
