@@ -651,22 +651,22 @@ async function download() {
 	let deviceBuildDate = new Date('1970-01-01T00:00:00Z');
 	let resetUserConfig = false;
 
-	try {
-		deviceBuildDate = await readBuildInfo();
-	} catch (error) {
-		console.error('Failed to read build info:', error);
-		deviceBuildDate = new Date('1970-01-01T00:00:00Z');
-	}
+	//try {
+	//	deviceBuildDate = await readBuildInfo();
+	//} catch (error) {
+	//	console.error('Failed to read build info:', error);
+	//	deviceBuildDate = new Date('1970-01-01T00:00:00Z');
+	//}
 
-	if (
-		!latestBuildDate.value ||
-		(latestBuildDate.value && deviceBuildDate < latestBuildDate.value)) {
-		console.warn('Device build date is older than the latest firmware build date');
-	} else if (!selectBeta.value) {
-		console.info('Device is already up to date');
-		state.value = states.UPGRADE_NOT_NEEDED;
-		return;
-	}
+	//if (
+	//	!latestBuildDate.value ||
+	//	(latestBuildDate.value && deviceBuildDate < latestBuildDate.value)) {
+	//	console.warn('Device build date is older than the latest firmware build date');
+	//} else if (!selectBeta.value) {
+	//	console.info('Device is already up to date');
+	//	state.value = states.UPGRADE_NOT_NEEDED;
+	//	return;
+	//}
 
 	if (
 		deviceBuildDate &&
@@ -696,7 +696,7 @@ async function download() {
 
 	const file = await loadFirmware(binary);
 
-	await device.do_download(transferSize, file, manifestationTolerant);
+	await device.do_download(64, file, manifestationTolerant);
 
 	let configFound = false;
 
