@@ -4,7 +4,7 @@ import {ref, reactive, watch} from 'vue';
 import {marked} from 'marked';
 import {getLatestRelease, getLatestPrerelease, downloadAsset} from '../services/GitHub.js';
 
-const openBetaActive = ref(false);
+const openBetaActive = ref(true);
 
 const compatibleDevices = [
 	{vendorId: 0x0483, productId: 0xA417}, // SB01
