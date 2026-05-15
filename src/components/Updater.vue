@@ -341,6 +341,7 @@ async function upgrade() {
  */
 async function getLatestFirmware(deviceName, beta = false) {
 	console.log(`Looking for latest ${beta ? 'beta' : 'stable'} firmware for ${deviceName}`);
+
 	try {
 		if (beta) {
 			return await getLatestPrerelease(deviceName);
