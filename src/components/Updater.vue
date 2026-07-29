@@ -350,6 +350,7 @@ async function getLatestFirmware(deviceName, beta = false) {
 		}
 	} catch (error) {
 		// Ignore error and fall back to local files
+		console.error(error);
 	}
 
 	try {

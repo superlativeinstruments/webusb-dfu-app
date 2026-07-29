@@ -10,7 +10,10 @@ export async function getLatestRelease(device) {
 		headers,
 		cache: 'no-store'
 	}).then(_ => _.json());
-	const binary = release.assets.find(a => a.name.contains(device).endsWith('.bin')).browser_download_url;
+	const binary = release.assets.find(a => {
+	    const name = a.name.toLowerCase()
+	    return name.includes(device.toLowerCase()) && name.endsWith('.bin')
+    }).browser_download_url;
 	const changelog = release.assets.find(a => a.name.endsWith('.md')).browser_download_url;
 	const releaseDateTimeRaw = release.body.match(/Build Time: (.*)/)[1] + 'Z';
 	const releaseDateTime = new Date(releaseDateTimeRaw);
@@ -33,7 +36,11 @@ export async function getLatestPrerelease(device) {
 
 	// Find the latest prerelease
 	const release = releases.find(r => r.prerelease);
-	const binary = release.assets.find(a => a.name.contains(device).endsWith('.bin')).browser_download_url;
+	console.log();
+	const binary = release.assets.find(a => {
+	    const name = a.name.toLowerCase()
+	    return name.includes(device.toLowerCase()) && name.endsWith('.bin')
+    }).browser_download_url;
 	const changelog = release.assets.find(a => a.name.endsWith('.md')).browser_download_url;
 	const releaseDateTimeRaw = release.body.match(/Build Time: (.*)/)[1] + 'Z';
 	const releaseDateTime = new Date(releaseDateTimeRaw);
