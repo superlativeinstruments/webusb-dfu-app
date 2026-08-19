@@ -292,7 +292,7 @@ async function open(device) {
 
 let retries = 0;
 
-async function upgrade() {
+async function upgrade(localFirmware) {
 	let interfaces = DFU.findDeviceDfuInterfaces(device);
 
 	if (interfaces.length == 0) {
@@ -304,7 +304,7 @@ async function upgrade() {
 		device = await open(new DFU.Device(device, interfaces[0]));
 
 		try {
-			await download();
+			await download(localFirmware);
 		} catch (error) {
 			console.error('Error during download:', error);
 			retries++;
@@ -321,7 +321,7 @@ async function upgrade() {
 			await timeout(500);
 
 			if (retries < 10) {
-				return upgrade();
+				return upgrade(localFirmware);
 			} else {
 				setError('Failed to upgrade device. Refresh and try again');
 			}
@@ -649,7 +649,7 @@ async function writeUserConfig(config) {
 	}
 }
 
-async function download() {
+async function download(localFirmware) {
 	let deviceBuildDate = new Date('1970-01-01T00:00:00Z');
 	let resetUserConfig = false;
 
@@ -694,9 +694,14 @@ async function download() {
 		setError('Failed to clear status');
 	}
 
-	const {binary, changelog, releaseDateTime} = await getLatestFirmware(deviceName.value, selectBeta.value);
+	let file;
 
-	const file = await loadFirmware(binary);
+	if (localFirmware) {
+		file = localFirmware;
+	} else {
+		const {binary} = await getLatestFirmware(deviceName.value, selectBeta.value);
+		file = await loadFirmware(binary);
+	}
 
 	await device.do_download(64, file, manifestationTolerant);
 
@@ -740,11 +745,36 @@ async function download() {
 	}
 }
 
+const firmwareFileInput = document.createElement('input');
+firmwareFileInput.type = 'file';
+firmwareFileInput.accept = '.bin';
+firmwareFileInput.style.display = 'none';
+document.body.appendChild(firmwareFileInput);
+
+firmwareFileInput.addEventListener('change', async (event) => {
+	const file = event.target.files[0];
+	firmwareFileInput.value = ''; // allow re-selecting the same file later
+
+	if (!file) return;
+
+	const buffer = await file.arrayBuffer();
+	await upgrade(buffer);
+});
+
 document.addEventListener('keydown', (event) => {
 	// Register shortcut for CMD/CTRL + B to select beta firmware
 	if ((event.metaKey || event.ctrlKey) && event.key === 'b') {
 		event.preventDefault();
 		selectBeta.value = !selectBeta.value;
+	}
+
+	// Register shortcut for CMD/CTRL + F to flash a local .bin file
+	if ((event.metaKey || event.ctrlKey) && event.key === 'f') {
+		event.preventDefault();
+
+		if (state.value === states.READY) {
+			firmwareFileInput.click();
+		}
 	}
 });
 
@@ -839,7 +869,7 @@ async function requestDevice() {
 		</div>
 
 		<div v-if="state == states.READY">
-			<button type="button" @click="upgrade">
+			<button type="button" @click="upgrade()">
 				Upgrade<br/>
 				{{deviceName}}
 				<span v-if="selectBeta" class="beta">
