@@ -22,7 +22,7 @@ let transferSize = 1024;
 
 let firmwareStartAddress;
 let userConfigAddress = 0x0803F800; // Last page
-let userConfigSize = 256; // Size of user config in bytes
+let userConfigSize = 259; // Size of user config in bytes
 
 const states = reactive({
 	WAITING_FOR_REQUEST: 'waitingForRequest',
@@ -621,13 +621,6 @@ async function writeUserConfig(config) {
 	} else {
 		config = new Uint8Array(config); // Ensure config is a Uint8Array
 		console.info('Using provided user config');
-	}
-
-	// If first byte is 0xFF (empty config), do nothing and exit
-	if (config[0] === 0xFF) {
-		console.info('User config is empty, skipping write');
-
-		return;
 	}
 
 	try {
